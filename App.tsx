@@ -149,6 +149,32 @@ function App() {
     }
   };
 
+  // Toggle task completion status
+  const handleToggleComplete = async (taskId: string, completed: boolean) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('tasks')
+      .update({
+        completed,
+        completed_at: completed ? new Date().toISOString() : null,
+      })
+      .eq('id', taskId)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Erro ao atualizar tarefa:', error);
+    } else {
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === taskId
+            ? { ...task, completed, completed_at: completed ? new Date().toISOString() : null }
+            : task
+        )
+      );
+    }
+  };
+
   // Filter tasks by selected date
   const filteredTasks = tasks.filter((task) => {
     if (!task.due_date) return false;
@@ -245,6 +271,7 @@ function App() {
                     selectedDate={selectedDate}
                     onDateChange={setSelectedDate}
                     onQuickAdd={handleQuickAddTask}
+                    onToggleComplete={handleToggleComplete}
                   />
                 )}
                 <HabitTracker habits={MOCK_HABITS} />

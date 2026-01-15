@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ListTodo, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ListTodo, ChevronLeft, ChevronRight, ChevronDown, Check } from 'lucide-react';
 import { Task } from '../types';
 
 interface TaskListProps {
@@ -7,11 +7,22 @@ interface TaskListProps {
   selectedDate: Date;
   onDateChange: (date: Date) => void;
   onQuickAdd?: (title: string) => Promise<void>;
+  onToggleComplete?: (taskId: string, completed: boolean) => Promise<void>;
 }
 
-export const TaskList: React.FC<TaskListProps> = ({ tasks, selectedDate, onDateChange, onQuickAdd }) => {
+export const TaskList: React.FC<TaskListProps> = ({
+  tasks,
+  selectedDate,
+  onDateChange,
+  onQuickAdd,
+  onToggleComplete
+}) => {
   const [quickTaskTitle, setQuickTaskTitle] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(false);
+
+  const pendingTasks = tasks.filter((task) => !task.completed);
+  const completedTasks = tasks.filter((task) => task.completed);
 
   const handleQuickAdd = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && quickTaskTitle.trim() && onQuickAdd) {
@@ -19,6 +30,12 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, selectedDate, onDateC
       await onQuickAdd(quickTaskTitle.trim());
       setQuickTaskTitle('');
       setIsAdding(false);
+    }
+  };
+
+  const handleToggleComplete = async (taskId: string, currentCompleted: boolean) => {
+    if (onToggleComplete) {
+      await onToggleComplete(taskId, !currentCompleted);
     }
   };
 
@@ -59,6 +76,47 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, selectedDate, onDateC
     return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
   };
 
+  const priorityColors = {
+    low: 'bg-slate-500/15 text-slate-700 dark:text-slate-400',
+    medium: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
+    high: 'bg-red-500/15 text-red-700 dark:text-red-400',
+  };
+  const priorityLabels = {
+    low: 'Baixa',
+    medium: 'Média',
+    high: 'Alta',
+  };
+
+  const TaskItem = ({ task, isCompleted }: { task: Task; isCompleted: boolean; key?: string }) => (
+    <div className="flex items-start gap-4 group">
+      <div className="pt-0.5">
+        <button
+          onClick={() => handleToggleComplete(task.id, task.completed)}
+          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer
+            ${isCompleted
+              ? 'bg-primary border-primary text-primary-foreground'
+              : 'border-input hover:border-primary'
+            }`}
+        >
+          {isCompleted && <Check size={12} strokeWidth={3} />}
+        </button>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className={`text-sm font-semibold truncate ${isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+          {task.title}
+        </p>
+        {task.description && (
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {task.description}
+          </p>
+        )}
+      </div>
+      <span className={`px-2 py-1 text-[10px] font-bold rounded uppercase tracking-wide ${priorityColors[task.priority]}`}>
+        {priorityLabels[task.priority]}
+      </span>
+    </div>
+  );
+
   return (
     <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm overflow-hidden flex flex-col h-fit">
       <div className="p-6 border-b border-border flex items-center justify-between">
@@ -84,46 +142,41 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, selectedDate, onDateC
           </button>
         </div>
       </div>
-      
-      <div className="p-6 space-y-5">
-        {tasks.map((task) => {
-          const priorityColors = {
-            low: 'bg-slate-500/15 text-slate-700 dark:text-slate-400',
-            medium: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
-            high: 'bg-red-500/15 text-red-700 dark:text-red-400',
-          };
-          const priorityLabels = {
-            low: 'Baixa',
-            medium: 'Média',
-            high: 'Alta',
-          };
 
-          return (
-            <div key={task.id} className="flex items-start gap-4 group">
-              <div className="pt-0.5">
-                <input
-                  type="checkbox"
-                  defaultChecked={task.completed}
-                  className="w-5 h-5 rounded border-input text-primary focus:ring-primary cursor-pointer accent-primary"
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm font-semibold truncate ${task.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                  {task.title}
-                </p>
-                {task.description && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {task.description}
-                  </p>
-                )}
-              </div>
-              <span className={`px-2 py-1 text-[10px] font-bold rounded uppercase tracking-wide ${priorityColors[task.priority]}`}>
-                {priorityLabels[task.priority]}
-              </span>
-            </div>
-          );
-        })}
+      <div className="p-6 space-y-5">
+        {pendingTasks.map((task) => (
+          <TaskItem key={task.id} task={task} isCompleted={false} />
+        ))}
+
+        {pendingTasks.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-2">
+            Nenhuma tarefa pendente para este dia.
+          </p>
+        )}
       </div>
+
+      {completedTasks.length > 0 && (
+        <div className="border-t border-border">
+          <button
+            onClick={() => setShowCompleted(!showCompleted)}
+            className="w-full px-6 py-3 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ChevronDown
+              size={16}
+              className={`transition-transform ${showCompleted ? 'rotate-180' : ''}`}
+            />
+            Concluídas ({completedTasks.length})
+          </button>
+
+          {showCompleted && (
+            <div className="px-6 pb-6 space-y-5">
+              {completedTasks.map((task) => (
+                <TaskItem key={task.id} task={task} isCompleted={true} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="mt-auto bg-muted/50 p-4 border-t border-border">
         <input
