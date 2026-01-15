@@ -292,6 +292,9 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
                       {history.map((done, index) => {
                         const dayInfo = last7Days[index];
                         const isEnabled = isDayEnabledForHabit(habit, dayInfo.dayCode);
+                        const todayStr = new Date().toISOString().split('T')[0];
+                        const isPastDay = dayInfo.date < todayStr;
+                        const isMissedDay = isEnabled && !done && isPastDay;
 
                         return (
                           <button
@@ -304,13 +307,17 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
                                 ? 'bg-muted/30 cursor-not-allowed opacity-40'
                                 : done
                                   ? 'bg-primary cursor-pointer hover:ring-2 hover:ring-primary/50'
-                                  : 'bg-muted hover:bg-muted/80 cursor-pointer hover:ring-2 hover:ring-primary/50'
+                                  : isMissedDay
+                                    ? 'bg-red-500/20 border border-red-500/40 cursor-pointer hover:ring-2 hover:ring-red-500/50'
+                                    : 'bg-muted hover:bg-muted/80 cursor-pointer hover:ring-2 hover:ring-primary/50'
                               }
                             `}
                             title={
                               !isEnabled
                                 ? `${dayInfo.date} - Dia não programado`
-                                : `${dayInfo.date} - ${done ? 'Completo' : 'Não completo'}`
+                                : isMissedDay
+                                  ? `${dayInfo.date} - Dia perdido`
+                                  : `${dayInfo.date} - ${done ? 'Completo' : 'Não completo'}`
                             }
                           />
                         );
