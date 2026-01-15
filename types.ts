@@ -11,6 +11,9 @@ export interface Task {
   created_at: string;
   completed_at: string | null;
   updated_at: string;
+  estimated_minutes: number | null;
+  start_time: string | null;
+  end_time: string | null;
 }
 
 export interface Habit {

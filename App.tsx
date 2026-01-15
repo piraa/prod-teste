@@ -96,6 +96,9 @@ function App() {
     description: string;
     priority: 'low' | 'medium' | 'high';
     due_date: string | null;
+    estimated_minutes: number | null;
+    start_time: string | null;
+    end_time: string | null;
   }) => {
     if (!user) return;
 
@@ -109,6 +112,9 @@ function App() {
           priority: taskData.priority,
           due_date: taskData.due_date,
           completed: false,
+          estimated_minutes: taskData.estimated_minutes,
+          start_time: taskData.start_time,
+          end_time: taskData.end_time,
         },
       ])
       .select()

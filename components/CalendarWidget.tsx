@@ -102,8 +102,25 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
     onDateChange(date);
   };
 
-  // Get tasks for selected date
-  const selectedDateTasks = getTasksForDate(selectedDate);
+  // Get tasks for selected date, sorted by start_time (earliest first)
+  const selectedDateTasks = getTasksForDate(selectedDate).sort((a, b) => {
+    // Tasks with start_time come first, sorted by time
+    if (a.start_time && b.start_time) {
+      return a.start_time.localeCompare(b.start_time);
+    }
+    // Tasks with start_time come before tasks without
+    if (a.start_time && !b.start_time) return -1;
+    if (!a.start_time && b.start_time) return 1;
+    // Tasks without start_time maintain original order
+    return 0;
+  });
+
+  // Format time for display (e.g., "09:00" -> "9:00")
+  const formatTime = (time: string | null): string => {
+    if (!time) return '';
+    const [hours, minutes] = time.split(':');
+    return `${parseInt(hours)}:${minutes}`;
+  };
 
   // Get priority color
   const getPriorityColor = (priority: Task['priority']): string => {
@@ -192,14 +209,14 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
               key={task.id}
               className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer group"
             >
-              <div className={`w-1.5 h-8 ${getPriorityColor(task.priority)} rounded-full shadow-sm ${task.completed ? 'opacity-50' : ''}`}></div>
+              <div className={`w-1.5 ${task.start_time ? 'h-10' : 'h-8'} ${getPriorityColor(task.priority)} rounded-full shadow-sm ${task.completed ? 'opacity-50' : ''}`}></div>
               <div className="flex-1 min-w-0">
                 <p className={`text-sm font-semibold truncate ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
                   {task.title}
                 </p>
-                {task.description && (
-                  <p className="text-xs text-muted-foreground truncate group-hover:text-accent-foreground/80">
-                    {task.description}
+                {task.start_time && (
+                  <p className="text-xs text-muted-foreground group-hover:text-accent-foreground/80">
+                    {formatTime(task.start_time)}{task.end_time ? ` - ${formatTime(task.end_time)}` : ''}
                   </p>
                 )}
               </div>

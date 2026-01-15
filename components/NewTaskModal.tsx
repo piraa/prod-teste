@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Clock } from 'lucide-react';
 
 interface NewTaskModalProps {
   isOpen: boolean;
@@ -9,14 +9,31 @@ interface NewTaskModalProps {
     description: string;
     priority: 'low' | 'medium' | 'high';
     due_date: string | null;
+    estimated_minutes: number | null;
+    start_time: string | null;
+    end_time: string | null;
   }) => Promise<void>;
 }
+
+const ESTIMATE_OPTIONS = [
+  { value: 15, label: '15 min' },
+  { value: 30, label: '30 min' },
+  { value: 45, label: '45 min' },
+  { value: 60, label: '1h' },
+  { value: 90, label: '1h30' },
+  { value: 120, label: '2h' },
+  { value: 180, label: '3h' },
+  { value: 240, label: '4h' },
+];
 
 export const NewTaskModal: React.FC<NewTaskModalProps> = ({ isOpen, onClose, onSave }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [dueDate, setDueDate] = useState('');
+  const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(null);
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [saving, setSaving] = useState(false);
 
   if (!isOpen) return null;
@@ -31,6 +48,9 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({ isOpen, onClose, onS
       description: description.trim(),
       priority,
       due_date: dueDate || null,
+      estimated_minutes: estimatedMinutes,
+      start_time: startTime || null,
+      end_time: endTime || null,
     });
     setSaving(false);
 
@@ -39,6 +59,9 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({ isOpen, onClose, onS
     setDescription('');
     setPriority('medium');
     setDueDate('');
+    setEstimatedMinutes(null);
+    setStartTime('');
+    setEndTime('');
     onClose();
   };
 
@@ -49,8 +72,8 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({ isOpen, onClose, onS
         onClick={onClose}
       />
 
-      <div className="relative bg-card border border-border rounded-xl shadow-lg w-full max-w-md mx-4 animate-fade-in-up">
-        <div className="flex items-center justify-between p-4 border-b border-border">
+      <div className="relative bg-card border border-border rounded-xl shadow-lg w-full max-w-md mx-4 animate-fade-in-up max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-card">
           <h2 className="text-lg font-bold text-foreground">Nova Tarefa</h2>
           <button
             onClick={onClose}
@@ -124,6 +147,59 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({ isOpen, onClose, onS
               onChange={(e) => setDueDate(e.target.value)}
               className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             />
+          </div>
+
+          {/* Horários */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">
+              <Clock size={14} className="inline mr-1" />
+              Horário
+            </label>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  placeholder="Início"
+                  className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <span className="text-xs text-muted-foreground mt-1 block">Início</span>
+              </div>
+              <div className="flex-1">
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  placeholder="Fim"
+                  className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <span className="text-xs text-muted-foreground mt-1 block">Fim</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Estimativa */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">
+              Estimativa de Duração
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {ESTIMATE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setEstimatedMinutes(estimatedMinutes === opt.value ? null : opt.value)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    estimatedMinutes === opt.value
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground hover:bg-accent'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="flex gap-3 pt-2">
