@@ -291,7 +291,11 @@ function App() {
 
               {/* Right Column (Calendar & Goals) */}
               <div className="space-y-8">
-                <CalendarWidget />
+                <CalendarWidget
+                  tasks={tasks}
+                  selectedDate={selectedDate}
+                  onDateChange={setSelectedDate}
+                />
                 <GoalsWidget goals={MOCK_GOALS} />
               </div>
 

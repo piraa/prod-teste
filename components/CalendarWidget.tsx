@@ -1,65 +1,217 @@
-import React from 'react';
-import { ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { ChevronLeft, ChevronRight, Circle } from 'lucide-react';
+import { Task } from '../types';
 
-export const CalendarWidget: React.FC = () => {
+interface CalendarWidgetProps {
+  tasks: Task[];
+  selectedDate: Date;
+  onDateChange: (date: Date) => void;
+}
+
+export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
+  tasks,
+  selectedDate,
+  onDateChange
+}) => {
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-  const days = [
-    { num: 28, isPrev: true }, { num: 29, isPrev: true }, { num: 30, isPrev: true }, 
-    { num: 1 }, { num: 2 }, { num: 3 }, { num: 4 },
-    { num: 5 }, { num: 6 }, { num: 7 }, { num: 8 }, { num: 9 }, { num: 10 }, { num: 11 },
-    { num: 12 }, { num: 13 }, { num: 14 }, { num: 15, isToday: true }, { num: 16 }, { num: 17 }, { num: 18 },
-    { num: 19 }, { num: 20 }, { num: 21 }, { num: 22 }, { num: 23 }, { num: 24 }, { num: 25 }
+
+  // Get month name in Portuguese
+  const monthNames = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
   ];
+
+  // Generate calendar days for the current month view
+  const calendarDays = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+
+    // First day of the month
+    const firstDay = new Date(year, month, 1);
+    // Last day of the month
+    const lastDay = new Date(year, month + 1, 0);
+
+    // Day of week for first day (0 = Sunday)
+    const startDayOfWeek = firstDay.getDay();
+
+    const days: { date: Date; isCurrentMonth: boolean }[] = [];
+
+    // Add days from previous month
+    const prevMonthLastDay = new Date(year, month, 0).getDate();
+    for (let i = startDayOfWeek - 1; i >= 0; i--) {
+      days.push({
+        date: new Date(year, month - 1, prevMonthLastDay - i),
+        isCurrentMonth: false
+      });
+    }
+
+    // Add days from current month
+    for (let i = 1; i <= lastDay.getDate(); i++) {
+      days.push({
+        date: new Date(year, month, i),
+        isCurrentMonth: true
+      });
+    }
+
+    // Add days from next month to complete the grid (6 rows)
+    const remainingDays = 42 - days.length; // 6 rows * 7 days
+    for (let i = 1; i <= remainingDays; i++) {
+      days.push({
+        date: new Date(year, month + 1, i),
+        isCurrentMonth: false
+      });
+    }
+
+    return days;
+  }, [currentMonth]);
+
+  // Check if a date has tasks
+  const getTasksForDate = (date: Date): Task[] => {
+    const dateStr = date.toISOString().split('T')[0];
+    return tasks.filter(task => {
+      if (!task.due_date) return false;
+      const taskDateStr = task.due_date.split('T')[0];
+      return taskDateStr === dateStr;
+    });
+  };
+
+  // Check if date is today
+  const isToday = (date: Date): boolean => {
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  };
+
+  // Check if date is selected
+  const isSelected = (date: Date): boolean => {
+    return date.toDateString() === selectedDate.toDateString();
+  };
+
+  // Navigate to previous month
+  const goToPrevMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+  };
+
+  // Navigate to next month
+  const goToNextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+  };
+
+  // Handle day click
+  const handleDayClick = (date: Date) => {
+    onDateChange(date);
+  };
+
+  // Get tasks for selected date
+  const selectedDateTasks = getTasksForDate(selectedDate);
+
+  // Get priority color
+  const getPriorityColor = (priority: Task['priority']): string => {
+    switch (priority) {
+      case 'high': return 'bg-destructive';
+      case 'medium': return 'bg-primary';
+      case 'low': return 'bg-blue-400';
+      default: return 'bg-muted-foreground';
+    }
+  };
 
   return (
     <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-6">
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h3 className="font-bold">Maio 2024</h3>
+        <h3 className="font-bold">
+          {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+        </h3>
         <div className="flex gap-2">
-          <button className="p-1 rounded hover:bg-accent hover:text-accent-foreground text-muted-foreground transition-colors">
+          <button
+            onClick={goToPrevMonth}
+            className="p-1 rounded hover:bg-accent hover:text-accent-foreground text-muted-foreground transition-colors"
+          >
             <ChevronLeft size={18} />
           </button>
-          <button className="p-1 rounded hover:bg-accent hover:text-accent-foreground text-muted-foreground transition-colors">
+          <button
+            onClick={goToNextMonth}
+            className="p-1 rounded hover:bg-accent hover:text-accent-foreground text-muted-foreground transition-colors"
+          >
             <ChevronRight size={18} />
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-y-4 text-center text-xs mb-6">
+      {/* Calendar Grid */}
+      <div className="grid grid-cols-7 gap-y-2 text-center text-xs mb-4">
+        {/* Week day headers */}
         {weekDays.map((d) => (
-          <span key={d} className="font-bold text-muted-foreground uppercase">{d}</span>
+          <span key={d} className="font-bold text-muted-foreground uppercase py-2">{d}</span>
         ))}
-        {days.map((day, i) => (
-          <span 
-            key={i} 
-            className={`
-              py-1 flex items-center justify-center font-medium rounded-full
-              ${day.isPrev ? 'text-muted-foreground/50' : 'text-foreground'}
-              ${day.isToday ? 'bg-primary text-primary-foreground font-bold shadow-sm' : ''}
-            `}
-          >
-            {day.num}
-          </span>
-        ))}
+
+        {/* Calendar days */}
+        {calendarDays.map((day, i) => {
+          const dayTasks = getTasksForDate(day.date);
+          const hasTasks = dayTasks.length > 0;
+          const hasIncompleteTasks = dayTasks.some(t => !t.completed);
+
+          return (
+            <button
+              key={i}
+              onClick={() => handleDayClick(day.date)}
+              className={`
+                relative py-1.5 flex flex-col items-center justify-center font-medium rounded-lg transition-all
+                ${!day.isCurrentMonth ? 'text-muted-foreground/40' : 'text-foreground'}
+                ${isToday(day.date) && !isSelected(day.date) ? 'bg-accent text-accent-foreground' : ''}
+                ${isSelected(day.date) ? 'bg-primary text-primary-foreground font-bold shadow-sm' : ''}
+                ${day.isCurrentMonth && !isSelected(day.date) && !isToday(day.date) ? 'hover:bg-accent/50' : ''}
+              `}
+            >
+              <span>{day.date.getDate()}</span>
+              {/* Task indicator */}
+              {hasTasks && (
+                <div className="flex gap-0.5 mt-0.5">
+                  <Circle
+                    size={4}
+                    className={`${hasIncompleteTasks ? 'fill-primary text-primary' : 'fill-muted-foreground/50 text-muted-foreground/50'}`}
+                  />
+                </div>
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      <div className="space-y-3 pt-2 border-t border-border">
-        <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer group">
-          <div className="w-1.5 h-10 bg-primary rounded-full shadow-sm"></div>
-          <div>
-            <p className="text-sm font-semibold">Sprint Planning</p>
-            <p className="text-xs text-muted-foreground group-hover:text-accent-foreground/80">14:00 - 15:30</p>
-          </div>
-          <MoreVertical size={16} className="ml-auto text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-        </div>
-        <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer group">
-          <div className="w-1.5 h-10 bg-blue-400 rounded-full shadow-sm"></div>
-          <div>
-            <p className="text-sm font-semibold">Café com Beatriz</p>
-            <p className="text-xs text-muted-foreground group-hover:text-accent-foreground/80">16:30 - 17:00</p>
-          </div>
-          <MoreVertical size={16} className="ml-auto text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-        </div>
+      {/* Selected Date Tasks */}
+      <div className="space-y-2 pt-4 border-t border-border">
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Tarefas para {selectedDate.getDate()} de {monthNames[selectedDate.getMonth()]}
+        </p>
+
+        {selectedDateTasks.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-2">Nenhuma tarefa para este dia</p>
+        ) : (
+          selectedDateTasks.slice(0, 3).map((task) => (
+            <div
+              key={task.id}
+              className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer group"
+            >
+              <div className={`w-1.5 h-8 ${getPriorityColor(task.priority)} rounded-full shadow-sm ${task.completed ? 'opacity-50' : ''}`}></div>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-semibold truncate ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
+                  {task.title}
+                </p>
+                {task.description && (
+                  <p className="text-xs text-muted-foreground truncate group-hover:text-accent-foreground/80">
+                    {task.description}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+
+        {selectedDateTasks.length > 3 && (
+          <p className="text-xs text-muted-foreground text-center pt-1">
+            +{selectedDateTasks.length - 3} mais tarefas
+          </p>
+        )}
       </div>
     </div>
   );
