@@ -11,7 +11,7 @@ interface HabitModalProps {
     frequency: 'daily' | 'weekdays' | 'custom';
     target_days: string[] | null;
     goal_target: number | null;
-    goal_period: 'weekly' | 'monthly' | null;
+    goal_period: 'weekly' | 'monthly' | 'yearly' | null;
   }) => Promise<void>;
   onDelete?: (habitId: string) => Promise<void>;
   habit?: Habit | null;
@@ -40,7 +40,7 @@ export const HabitModal: React.FC<HabitModalProps> = ({
   const [targetDays, setTargetDays] = useState<string[]>([]);
   const [hasGoal, setHasGoal] = useState(false);
   const [goalTarget, setGoalTarget] = useState<number | null>(null);
-  const [goalPeriod, setGoalPeriod] = useState<'weekly' | 'monthly'>('monthly');
+  const [goalPeriod, setGoalPeriod] = useState<'weekly' | 'monthly' | 'yearly'>('monthly');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -236,7 +236,7 @@ export const HabitModal: React.FC<HabitModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setGoalPeriod('weekly')}
-                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        className={`flex-1 px-2 py-2 rounded-lg text-xs font-medium transition-colors ${
                           goalPeriod === 'weekly'
                             ? 'bg-primary text-primary-foreground'
                             : 'bg-muted text-muted-foreground hover:bg-accent'
@@ -247,7 +247,7 @@ export const HabitModal: React.FC<HabitModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setGoalPeriod('monthly')}
-                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        className={`flex-1 px-2 py-2 rounded-lg text-xs font-medium transition-colors ${
                           goalPeriod === 'monthly'
                             ? 'bg-primary text-primary-foreground'
                             : 'bg-muted text-muted-foreground hover:bg-accent'
@@ -255,11 +255,24 @@ export const HabitModal: React.FC<HabitModalProps> = ({
                       >
                         Mês
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setGoalPeriod('yearly')}
+                        className={`flex-1 px-2 py-2 rounded-lg text-xs font-medium transition-colors ${
+                          goalPeriod === 'yearly'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground hover:bg-accent'
+                        }`}
+                      >
+                        Ano
+                      </button>
                     </div>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {goalTarget && goalPeriod === 'monthly'
+                  {goalTarget && goalPeriod === 'yearly'
+                    ? `Meta: ${goalTarget} vezes por ano`
+                    : goalTarget && goalPeriod === 'monthly'
                     ? `Meta: ${goalTarget} vezes por mês`
                     : goalTarget && goalPeriod === 'weekly'
                     ? `Meta: ${goalTarget} vezes por semana`

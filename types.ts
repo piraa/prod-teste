@@ -27,9 +27,9 @@ export interface Habit {
   created_at: string;
   updated_at: string;
   is_active: boolean;
-  // Campos de meta mensal
+  // Campos de meta
   goal_target: number | null;      // Ex: 20 (treinos no mês)
-  goal_period: 'weekly' | 'monthly' | null;  // Período da meta
+  goal_period: 'weekly' | 'monthly' | 'yearly' | null;  // Período da meta
 }
 
 export interface HabitLog {

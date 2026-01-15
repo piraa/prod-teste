@@ -350,7 +350,7 @@ function App() {
     frequency: 'daily' | 'weekdays' | 'custom';
     target_days: string[] | null;
     goal_target: number | null;
-    goal_period: 'weekly' | 'monthly' | null;
+    goal_period: 'weekly' | 'monthly' | 'yearly' | null;
   }) => {
     if (!user) return;
 
@@ -384,7 +384,7 @@ function App() {
     frequency: 'daily' | 'weekdays' | 'custom';
     target_days: string[] | null;
     goal_target: number | null;
-    goal_period: 'weekly' | 'monthly' | null;
+    goal_period: 'weekly' | 'monthly' | 'yearly' | null;
   }) => {
     if (!user) return;
 

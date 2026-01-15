@@ -13,7 +13,7 @@ interface HabitTrackerProps {
     frequency: 'daily' | 'weekdays' | 'custom';
     target_days: string[] | null;
     goal_target: number | null;
-    goal_period: 'weekly' | 'monthly' | null;
+    goal_period: 'weekly' | 'monthly' | 'yearly' | null;
   }) => Promise<void>;
   onUpdateHabit: (habitId: string, habitData: {
     title: string;
@@ -21,10 +21,15 @@ interface HabitTrackerProps {
     frequency: 'daily' | 'weekdays' | 'custom';
     target_days: string[] | null;
     goal_target: number | null;
-    goal_period: 'weekly' | 'monthly' | null;
+    goal_period: 'weekly' | 'monthly' | 'yearly' | null;
   }) => Promise<void>;
   onDeleteHabit: (habitId: string) => Promise<void>;
 }
+
+// Map JS day (0=Sun, 1=Mon, ...) to day code
+const JS_DAY_TO_CODE: Record<number, string> = {
+  0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat'
+};
 
 export const HabitTracker: React.FC<HabitTrackerProps> = ({
   habits,
@@ -39,7 +44,7 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
 
   // Generate the last 7 days (today is the last one)
   const last7Days = useMemo(() => {
-    const days: { date: string; dayLabel: string }[] = [];
+    const days: { date: string; dayLabel: string; dayCode: string }[] = [];
     const today = new Date();
 
     for (let i = 6; i >= 0; i--) {
@@ -49,11 +54,26 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
       const dayLabels = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
       days.push({
         date: dateStr,
-        dayLabel: dayLabels[d.getDay()]
+        dayLabel: dayLabels[d.getDay()],
+        dayCode: JS_DAY_TO_CODE[d.getDay()]
       });
     }
     return days;
   }, []);
+
+  // Check if a day is enabled for a habit based on its frequency
+  const isDayEnabledForHabit = (habit: Habit, dayCode: string): boolean => {
+    switch (habit.frequency) {
+      case 'daily':
+        return true;
+      case 'weekdays':
+        return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].includes(dayCode);
+      case 'custom':
+        return habit.target_days?.includes(dayCode) ?? false;
+      default:
+        return true;
+    }
+  };
 
   // Calculate history for a habit (last 7 days)
   const getHabitHistory = (habitId: string): boolean[] => {
@@ -103,6 +123,9 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
       // Start of current week (Sunday)
       startDate = new Date(today);
       startDate.setDate(today.getDate() - today.getDay());
+    } else if (habit.goal_period === 'yearly') {
+      // Start of current year
+      startDate = new Date(today.getFullYear(), 0, 1);
     } else {
       // Start of current month
       startDate = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -128,8 +151,13 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
     if (habit.goal_target && habit.goal_period) {
       const progress = calculateGoalProgress(habit);
       if (progress) {
-        const periodLabel = habit.goal_period === 'weekly' ? 'semana' : 'mês';
-        return `${progress.current}/${progress.target} este ${periodLabel}`;
+        const periodLabels: Record<string, string> = {
+          'weekly': 'esta semana',
+          'monthly': 'este mês',
+          'yearly': 'este ano'
+        };
+        const periodLabel = periodLabels[habit.goal_period] || 'este período';
+        return `${progress.current}/${progress.target} ${periodLabel}`;
       }
     }
 
@@ -180,7 +208,7 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
     frequency: 'daily' | 'weekdays' | 'custom';
     target_days: string[] | null;
     goal_target: number | null;
-    goal_period: 'weekly' | 'monthly' | null;
+    goal_period: 'weekly' | 'monthly' | 'yearly' | null;
   }) => {
     if (editingHabit) {
       await onUpdateHabit(editingHabit.id, habitData);
@@ -261,21 +289,32 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
                       </span>
                     </div>
                     <div className="flex gap-1 sm:gap-1.5 flex-shrink-0">
-                      {history.map((done, index) => (
-                        <button
-                          key={index}
-                          onClick={() => handleToggle(habit.id, index)}
-                          className={`
-                            w-5 h-5 sm:w-6 sm:h-6 rounded-md transition-all cursor-pointer
-                            hover:ring-2 hover:ring-primary/50
-                            ${done
-                              ? 'bg-primary'
-                              : 'bg-muted hover:bg-muted/80'
+                      {history.map((done, index) => {
+                        const dayInfo = last7Days[index];
+                        const isEnabled = isDayEnabledForHabit(habit, dayInfo.dayCode);
+
+                        return (
+                          <button
+                            key={index}
+                            onClick={() => isEnabled && handleToggle(habit.id, index)}
+                            disabled={!isEnabled}
+                            className={`
+                              w-5 h-5 sm:w-6 sm:h-6 rounded-md transition-all
+                              ${!isEnabled
+                                ? 'bg-muted/30 cursor-not-allowed opacity-40'
+                                : done
+                                  ? 'bg-primary cursor-pointer hover:ring-2 hover:ring-primary/50'
+                                  : 'bg-muted hover:bg-muted/80 cursor-pointer hover:ring-2 hover:ring-primary/50'
+                              }
+                            `}
+                            title={
+                              !isEnabled
+                                ? `${dayInfo.date} - Dia não programado`
+                                : `${dayInfo.date} - ${done ? 'Completo' : 'Não completo'}`
                             }
-                          `}
-                          title={`${last7Days[index].date} - ${done ? 'Completo' : 'Não completo'}`}
-                        />
-                      ))}
+                          />
+                        );
+                      })}
                     </div>
                   </div>
 
