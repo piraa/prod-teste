@@ -1,14 +1,22 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { X, Send, Loader2, Sparkles, PanelLeftClose, PanelLeft, Plus } from 'lucide-react';
+import { X, Send, Loader2, Sparkles, PanelLeftClose, PanelLeft, Plus, ListTodo, CalendarDays, TrendingUp, Zap } from 'lucide-react';
 import { useChatContext } from '../../contexts/ChatContext';
 import { ChatMessage } from './ChatMessage';
 import { ConversationList } from './ConversationList';
+
+const quickPrompts = [
+  { icon: ListTodo, label: 'Tarefas de hoje', prompt: 'Quais sao minhas tarefas de hoje?' },
+  { icon: CalendarDays, label: 'Proxima semana', prompt: 'O que tenho para a proxima semana?' },
+  { icon: TrendingUp, label: 'Meu progresso', prompt: 'Como esta meu progresso nos habitos?' },
+  { icon: Zap, label: 'Criar tarefa', prompt: 'Crie uma tarefa para ' },
+];
 
 interface ChatPanelProps {
   onClose: () => void;
   inputValue: string;
   setInputValue: (value: string) => void;
   onSubmit: (e: React.FormEvent) => void;
+  onQuickPrompt: (prompt: string, autoSend?: boolean) => void;
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({
@@ -16,6 +24,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   inputValue,
   setInputValue,
   onSubmit,
+  onQuickPrompt,
 }) => {
   const {
     messages,
@@ -106,11 +115,25 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-              <Sparkles className="w-8 h-8 mb-2 text-primary/50" />
-              <p className="text-sm">Como posso ajudar voce hoje?</p>
-              <p className="text-xs mt-1">
+              <Sparkles className="w-8 h-8 mb-3 text-primary/50" />
+              <p className="text-sm font-medium text-foreground">Como posso ajudar voce hoje?</p>
+              <p className="text-xs mt-1 mb-4">
                 Pergunte sobre suas tarefas, habitos ou peca para criar algo novo.
               </p>
+              <div className="grid grid-cols-2 gap-2 w-full max-w-sm">
+                {quickPrompts.map((item) => (
+                  <button
+                    key={item.label}
+                    onClick={() => onQuickPrompt(item.prompt, !item.prompt.endsWith(' '))}
+                    className="flex items-center gap-2 p-3 rounded-xl bg-muted/50 hover:bg-muted border border-border/50 hover:border-border transition-all text-left group"
+                  >
+                    <item.icon className="w-4 h-4 text-primary flex-shrink-0" />
+                    <span className="text-xs font-medium text-foreground group-hover:text-primary transition-colors">
+                      {item.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
           ) : (
             messages.map((message) => (

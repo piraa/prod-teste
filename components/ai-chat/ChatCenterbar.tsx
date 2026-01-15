@@ -23,6 +23,14 @@ export const ChatCenterbar: React.FC = () => {
     await sendMessage(message);
   };
 
+  const handleQuickPrompt = (prompt: string, autoSend = true) => {
+    if (autoSend) {
+      sendMessage(prompt);
+    } else {
+      setInputValue(prompt);
+    }
+  };
+
   // Keyboard shortcut: Cmd/Ctrl + K to focus
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -75,6 +83,7 @@ export const ChatCenterbar: React.FC = () => {
               inputValue={inputValue}
               setInputValue={setInputValue}
               onSubmit={handleSubmit}
+              onQuickPrompt={handleQuickPrompt}
             />
           ) : (
             <form onSubmit={handleSubmit} className="flex items-center h-full px-4 gap-3">
