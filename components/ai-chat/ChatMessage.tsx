@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
 import { User, Sparkles, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { ChatMessage as ChatMessageType } from '../../types/chat';
 
@@ -24,12 +25,30 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
 
       {/* Content */}
       <div className={`max-w-[80%] space-y-2 ${isUser ? 'items-end' : 'items-start'}`}>
-        <div className={`px-4 py-2 rounded-2xl text-sm whitespace-pre-wrap ${
+        <div className={`px-4 py-2 rounded-2xl text-sm ${
           isUser
-            ? 'bg-primary text-primary-foreground rounded-br-md'
-            : 'bg-muted text-foreground rounded-bl-md'
+            ? 'bg-primary text-primary-foreground rounded-br-md whitespace-pre-wrap'
+            : 'bg-muted text-foreground rounded-bl-md prose prose-sm prose-neutral dark:prose-invert max-w-none'
         }`}>
-          {message.content}
+          {isUser ? (
+            message.content
+          ) : (
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                ul: ({ children }) => <ul className="list-disc list-inside mb-2 last:mb-0 space-y-1">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal list-inside mb-2 last:mb-0 space-y-1">{children}</ol>,
+                li: ({ children }) => <li className="text-sm">{children}</li>,
+                strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                em: ({ children }) => <em className="italic">{children}</em>,
+                code: ({ children }) => (
+                  <code className="bg-background/50 px-1 py-0.5 rounded text-xs font-mono">{children}</code>
+                ),
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+          )}
         </div>
 
         {/* Actions indicator */}

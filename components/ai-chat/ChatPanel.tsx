@@ -11,6 +11,21 @@ const quickPrompts = [
   { icon: Zap, label: 'Criar tarefa', prompt: 'Crie uma tarefa para ' },
 ];
 
+const TypingIndicator: React.FC = () => (
+  <div className="flex gap-3">
+    <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-muted">
+      <Sparkles className="w-4 h-4 text-primary" />
+    </div>
+    <div className="px-4 py-3 rounded-2xl rounded-bl-md bg-muted">
+      <div className="flex items-center gap-1">
+        <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce [animation-delay:-0.3s]" />
+        <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce [animation-delay:-0.15s]" />
+        <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" />
+      </div>
+    </div>
+  </div>
+);
+
 interface ChatPanelProps {
   onClose: () => void;
   inputValue: string;
@@ -43,7 +58,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, isLoading]);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -136,9 +151,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               </div>
             </div>
           ) : (
-            messages.map((message) => (
-              <ChatMessage key={message.id} message={message} />
-            ))
+            <>
+              {messages.map((message) => (
+                <ChatMessage key={message.id} message={message} />
+              ))}
+              {isLoading && <TypingIndicator />}
+            </>
           )}
           <div ref={messagesEndRef} />
         </div>
