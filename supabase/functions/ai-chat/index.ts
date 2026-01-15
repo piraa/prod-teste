@@ -707,7 +707,7 @@ serve(async (req) => {
     }
 
     // 3. Build Gemini request
-    const geminiUrl = `${GEMINI_API_BASE}/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    const geminiUrl = `${GEMINI_API_BASE}/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
     // Build conversation contents
     const contents = [
