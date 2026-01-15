@@ -157,6 +157,14 @@ function App() {
     return taskDate === selected;
   });
 
+  // Get greeting based on time of day
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return 'Bom dia';
+    if (hour >= 12 && hour < 18) return 'Boa tarde';
+    return 'Boa noite';
+  };
+
   // Initialize theme based on preference or system
   useEffect(() => {
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -213,7 +221,7 @@ function App() {
             
             {/* Welcome Section */}
             <div className="animate-fade-in-up">
-              <h2 className="text-3xl font-bold tracking-tight">Bom dia, {userName} 👋</h2>
+              <h2 className="text-3xl font-bold tracking-tight">{getGreeting()}, {userName} ⚡️</h2>
               <p className="text-muted-foreground mt-1">
                 Hoje é segunda-feira, 15 de Maio.
               </p>
