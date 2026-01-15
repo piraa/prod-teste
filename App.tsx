@@ -35,6 +35,32 @@ function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
+  const [userName, setUserName] = useState<string>('');
+
+  // Fetch user profile from Supabase
+  useEffect(() => {
+    if (!user) {
+      setUserName('');
+      return;
+    }
+
+    async function fetchProfile() {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Erro ao buscar perfil:', error);
+        setUserName(user.email?.split('@')[0] || 'Usuário');
+      } else {
+        setUserName(data?.name || user.email?.split('@')[0] || 'Usuário');
+      }
+    }
+
+    fetchProfile();
+  }, [user]);
 
   // Fetch tasks from Supabase (only when user is logged in)
   useEffect(() => {
@@ -123,9 +149,6 @@ function App() {
   if (!user) {
     return <AuthPage />;
   }
-
-  // Get user name from metadata
-  const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'Usuário';
 
   return (
     <div className="flex h-screen bg-background overflow-hidden text-foreground">
