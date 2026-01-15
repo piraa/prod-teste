@@ -18,9 +18,24 @@ export interface Task {
 
 export interface Habit {
   id: string;
+  user_id: string;
   title: string;
-  meta: string;
-  history: boolean[]; // true = completed, false = not completed/pending
+  description: string | null;
+  frequency: 'daily' | 'weekdays' | 'custom';
+  target_days: string[] | null;
+  color: string;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+}
+
+export interface HabitLog {
+  id: string;
+  habit_id: string;
+  user_id: string;
+  logged_date: string;
+  completed: boolean;
+  created_at: string;
 }
 
 export interface Goal {

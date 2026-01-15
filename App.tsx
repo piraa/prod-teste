@@ -10,15 +10,9 @@ import { TaskModal } from './components/TaskModal';
 import { AuthPage } from './components/AuthPage';
 import { StyleguidePage } from './styleguide';
 import { CheckCircle2, Flame, TrendingUp, Timer, Loader2 } from 'lucide-react';
-import { Task, Habit, Goal } from './types';
+import { Task, Habit, HabitLog, Goal } from './types';
 import { supabase } from './lib/supabase';
 import { useAuth } from './contexts/AuthContext';
-
-const MOCK_HABITS: Habit[] = [
-  { id: '1', title: 'Meditação (15 min)', meta: 'Meta: Todos os dias', history: [true, true, true, true, false, false, false] },
-  { id: '2', title: 'Beber 2L de Água', meta: 'Meta: Todos os dias', history: [true, true, true, true, true, false, false] },
-  { id: '3', title: 'Sem redes sociais matinal', meta: 'Meta: Seg - Sex', history: [true, true, true, true, false, false, false] },
-];
 
 const MOCK_GOALS: Goal[] = [
   { id: '1', title: 'Ler 5 Livros', current: 3, target: 5 },
@@ -39,6 +33,9 @@ function App() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [userName, setUserName] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
+  const [loadingHabits, setLoadingHabits] = useState(true);
 
   // Fetch user profile from Supabase
   useEffect(() => {
@@ -90,6 +87,63 @@ function App() {
 
     fetchTasks();
   }, [user]);
+
+  // Fetch habits from Supabase
+  useEffect(() => {
+    if (!user) {
+      setHabits([]);
+      setHabitLogs([]);
+      setLoadingHabits(false);
+      return;
+    }
+
+    async function fetchHabits() {
+      const { data, error } = await supabase
+        .from('habits')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Erro ao buscar hábitos:', error);
+      } else {
+        setHabits(data || []);
+      }
+      setLoadingHabits(false);
+    }
+
+    fetchHabits();
+  }, [user]);
+
+  // Fetch habit logs for the last 7 days
+  useEffect(() => {
+    if (!user || habits.length === 0) {
+      return;
+    }
+
+    async function fetchHabitLogs() {
+      const today = new Date();
+      const sevenDaysAgo = new Date(today);
+      sevenDaysAgo.setDate(today.getDate() - 6);
+      const startDate = sevenDaysAgo.toISOString().split('T')[0];
+
+      const { data, error } = await supabase
+        .from('habit_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .gte('logged_date', startDate)
+        .order('logged_date', { ascending: true });
+
+      if (error) {
+        console.error('Erro ao buscar logs de hábitos:', error);
+      } else {
+        setHabitLogs(data || []);
+      }
+    }
+
+    fetchHabitLogs();
+  }, [user, habits]);
 
   // Add new task to Supabase
   const handleAddTask = async (taskData: {
@@ -255,6 +309,118 @@ function App() {
     }
   };
 
+  // Toggle habit completion for a specific date
+  const handleToggleHabit = async (habitId: string, date: string, completed: boolean) => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('habit_logs')
+      .upsert({
+        habit_id: habitId,
+        user_id: user.id,
+        logged_date: date,
+        completed,
+      }, {
+        onConflict: 'habit_id,logged_date'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Erro ao atualizar hábito:', error);
+    } else if (data) {
+      setHabitLogs((prev) => {
+        const existingIndex = prev.findIndex(
+          (log) => log.habit_id === habitId && log.logged_date === date
+        );
+        if (existingIndex >= 0) {
+          const updated = [...prev];
+          updated[existingIndex] = data;
+          return updated;
+        }
+        return [...prev, data];
+      });
+    }
+  };
+
+  // Add new habit
+  const handleAddHabit = async (habitData: {
+    title: string;
+    description: string;
+    frequency: 'daily' | 'weekdays' | 'custom';
+    target_days: string[] | null;
+  }) => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('habits')
+      .insert([{
+        user_id: user.id,
+        title: habitData.title,
+        description: habitData.description || null,
+        frequency: habitData.frequency,
+        target_days: habitData.target_days,
+        color: 'primary',
+        is_active: true,
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Erro ao criar hábito:', error);
+    } else if (data) {
+      setHabits((prev) => [...prev, data]);
+    }
+  };
+
+  // Update existing habit
+  const handleUpdateHabit = async (habitId: string, habitData: {
+    title: string;
+    description: string;
+    frequency: 'daily' | 'weekdays' | 'custom';
+    target_days: string[] | null;
+  }) => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('habits')
+      .update({
+        title: habitData.title,
+        description: habitData.description || null,
+        frequency: habitData.frequency,
+        target_days: habitData.target_days,
+      })
+      .eq('id', habitId)
+      .eq('user_id', user.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Erro ao atualizar hábito:', error);
+    } else if (data) {
+      setHabits((prev) =>
+        prev.map((habit) => (habit.id === habitId ? data : habit))
+      );
+    }
+  };
+
+  // Delete habit (soft delete - set is_active to false)
+  const handleDeleteHabit = async (habitId: string) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('habits')
+      .update({ is_active: false })
+      .eq('id', habitId)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Erro ao excluir hábito:', error);
+    } else {
+      setHabits((prev) => prev.filter((habit) => habit.id !== habitId));
+    }
+  };
+
   // Filter tasks by selected date
   const filteredTasks = tasks.filter((task) => {
     if (!task.due_date) return false;
@@ -391,7 +557,20 @@ function App() {
                     onEditTask={handleEditTask}
                   />
                 )}
-                <HabitTracker habits={MOCK_HABITS} />
+                {loadingHabits ? (
+                  <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-6">
+                    <p className="text-muted-foreground">Carregando hábitos...</p>
+                  </div>
+                ) : (
+                  <HabitTracker
+                    habits={habits}
+                    habitLogs={habitLogs}
+                    onToggleHabit={handleToggleHabit}
+                    onAddHabit={handleAddHabit}
+                    onUpdateHabit={handleUpdateHabit}
+                    onDeleteHabit={handleDeleteHabit}
+                  />
+                )}
               </div>
 
               {/* Right Column (Calendar & Goals) */}
