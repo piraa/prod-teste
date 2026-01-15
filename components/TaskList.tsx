@@ -1,12 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ListTodo } from 'lucide-react';
 import { Task } from '../types';
 
 interface TaskListProps {
   tasks: Task[];
+  onQuickAdd?: (title: string) => Promise<void>;
 }
 
-export const TaskList: React.FC<TaskListProps> = ({ tasks }) => {
+export const TaskList: React.FC<TaskListProps> = ({ tasks, onQuickAdd }) => {
+  const [quickTaskTitle, setQuickTaskTitle] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleQuickAdd = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && quickTaskTitle.trim() && onQuickAdd) {
+      setIsAdding(true);
+      await onQuickAdd(quickTaskTitle.trim());
+      setQuickTaskTitle('');
+      setIsAdding(false);
+    }
+  };
   return (
     <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm overflow-hidden flex flex-col h-fit">
       <div className="p-6 border-b border-border flex items-center justify-between">
@@ -61,10 +73,14 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks }) => {
       </div>
 
       <div className="mt-auto bg-muted/50 p-4 border-t border-border">
-        <input 
-          type="text" 
-          placeholder="+ Adicionar nova tarefa..." 
-          className="w-full bg-transparent border-none focus:ring-0 text-sm placeholder:text-muted-foreground text-foreground outline-none"
+        <input
+          type="text"
+          value={quickTaskTitle}
+          onChange={(e) => setQuickTaskTitle(e.target.value)}
+          onKeyDown={handleQuickAdd}
+          placeholder={isAdding ? 'Adicionando...' : '+ Adicionar nova tarefa...'}
+          disabled={isAdding}
+          className="w-full bg-transparent border-none focus:ring-0 text-sm placeholder:text-muted-foreground text-foreground outline-none disabled:opacity-50"
         />
       </div>
     </div>

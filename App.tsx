@@ -119,6 +119,32 @@ function App() {
     }
   };
 
+  // Quick add task (only title, defaults for rest)
+  const handleQuickAddTask = async (title: string) => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert([
+        {
+          user_id: user.id,
+          title,
+          description: null,
+          priority: 'medium',
+          due_date: null,
+          completed: false,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Erro ao criar tarefa:', error);
+    } else if (data) {
+      setTasks((prev) => [...prev, data]);
+    }
+  };
+
   // Initialize theme based on preference or system
   useEffect(() => {
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -194,7 +220,7 @@ function App() {
                     <p className="text-muted-foreground">Carregando tarefas...</p>
                   </div>
                 ) : (
-                  <TaskList tasks={tasks} />
+                  <TaskList tasks={tasks} onQuickAdd={handleQuickAddTask} />
                 )}
                 <HabitTracker habits={MOCK_HABITS} />
               </div>
