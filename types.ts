@@ -2,14 +2,15 @@ import React from 'react';
 
 export interface Task {
   id: string;
+  user_id: string;
   title: string;
-  category: string;
-  time: string;
+  description: string | null;
   completed: boolean;
-  tag?: {
-    label: string;
-    color: 'green' | 'amber' | 'blue' | 'slate';
-  };
+  priority: 'low' | 'medium' | 'high';
+  due_date: string | null;
+  created_at: string;
+  completed_at: string | null;
+  updated_at: string;
 }
 
 export interface Habit {

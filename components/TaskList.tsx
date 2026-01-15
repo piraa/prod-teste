@@ -20,36 +20,44 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks }) => {
       </div>
       
       <div className="p-6 space-y-5">
-        {tasks.map((task) => (
-          <div key={task.id} className="flex items-start gap-4 group">
-            <div className="pt-0.5">
-              <input 
-                type="checkbox" 
-                defaultChecked={task.completed}
-                className="w-5 h-5 rounded border-input text-primary focus:ring-primary cursor-pointer accent-primary" 
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className={`text-sm font-semibold truncate ${task.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                {task.title}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {task.category} • {task.time}
-              </p>
-            </div>
-            {task.tag && (
-              <span className={`
-                px-2 py-1 text-[10px] font-bold rounded uppercase tracking-wide
-                ${task.tag.color === 'green' ? 'bg-green-500/15 text-green-700 dark:text-green-400' : ''}
-                ${task.tag.color === 'amber' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400' : ''}
-                ${task.tag.color === 'blue' ? 'bg-blue-500/15 text-blue-700 dark:text-blue-400' : ''}
-                ${task.tag.color === 'slate' ? 'bg-slate-500/15 text-slate-700 dark:text-slate-400' : ''}
-              `}>
-                {task.tag.label}
+        {tasks.map((task) => {
+          const priorityColors = {
+            low: 'bg-slate-500/15 text-slate-700 dark:text-slate-400',
+            medium: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
+            high: 'bg-red-500/15 text-red-700 dark:text-red-400',
+          };
+          const priorityLabels = {
+            low: 'Baixa',
+            medium: 'Média',
+            high: 'Alta',
+          };
+          const dueTime = task.due_date
+            ? new Date(task.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+            : '';
+
+          return (
+            <div key={task.id} className="flex items-start gap-4 group">
+              <div className="pt-0.5">
+                <input
+                  type="checkbox"
+                  defaultChecked={task.completed}
+                  className="w-5 h-5 rounded border-input text-primary focus:ring-primary cursor-pointer accent-primary"
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-semibold truncate ${task.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                  {task.title}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {task.description || 'Sem descrição'} {dueTime && `• ${dueTime}`}
+                </p>
+              </div>
+              <span className={`px-2 py-1 text-[10px] font-bold rounded uppercase tracking-wide ${priorityColors[task.priority]}`}>
+                {priorityLabels[task.priority]}
               </span>
-            )}
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
 
       <div className="mt-auto bg-muted/50 p-4 border-t border-border">

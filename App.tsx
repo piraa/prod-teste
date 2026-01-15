@@ -8,14 +8,7 @@ import { CalendarWidget } from './components/CalendarWidget';
 import { GoalsWidget } from './components/GoalsWidget';
 import { CheckCircle2, Flame, TrendingUp, Timer } from 'lucide-react';
 import { Task, Habit, Goal } from './types';
-
-// Mock Data
-const MOCK_TASKS: Task[] = [
-  { id: '1', title: 'Revisão do projeto UX Design', category: 'Trabalho', time: '09:00 AM', completed: true, tag: { label: 'Feito', color: 'slate' } },
-  { id: '2', title: 'Academia - Treino de Pernas', category: 'Saúde', time: '11:30 AM', completed: false, tag: { label: 'Urgente', color: 'amber' } },
-  { id: '3', title: 'Reunião de alinhamento trimestral', category: 'Trabalho', time: '02:00 PM', completed: false, tag: { label: 'Reunião', color: 'blue' } },
-  { id: '4', title: 'Leitura: "Hábitos Atômicos"', category: 'Pessoal', time: '08:00 PM', completed: false, tag: { label: 'Lazer', color: 'green' } },
-];
+import { supabase } from './lib/supabase';
 
 const MOCK_HABITS: Habit[] = [
   { id: '1', title: 'Meditação (15 min)', meta: 'Meta: Todos os dias', history: [true, true, true, true, false, false, false] },
@@ -35,6 +28,27 @@ const AVATAR_URL = "https://lh3.googleusercontent.com/aida-public/AB6AXuDdbeaqp5
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loadingTasks, setLoadingTasks] = useState(true);
+
+  // Fetch tasks from Supabase
+  useEffect(() => {
+    async function fetchTasks() {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('due_date', { ascending: true });
+
+      if (error) {
+        console.error('Erro ao buscar tarefas:', error);
+      } else {
+        setTasks(data || []);
+      }
+      setLoadingTasks(false);
+    }
+
+    fetchTasks();
+  }, []);
 
   // Initialize theme based on preference or system
   useEffect(() => {
@@ -91,7 +105,13 @@ function App() {
               
               {/* Left Column (Tasks & Habits) */}
               <div className="xl:col-span-2 space-y-8">
-                <TaskList tasks={MOCK_TASKS} />
+                {loadingTasks ? (
+                  <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-6">
+                    <p className="text-muted-foreground">Carregando tarefas...</p>
+                  </div>
+                ) : (
+                  <TaskList tasks={tasks} />
+                )}
                 <HabitTracker habits={MOCK_HABITS} />
               </div>
 
