@@ -271,6 +271,27 @@ function App() {
     return 'Boa noite';
   };
 
+  // Get today's date formatted in Portuguese
+  const getTodayFormatted = () => {
+    const today = new Date();
+    const weekDays = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+    const months = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+    const dayOfWeek = weekDays[today.getDay()];
+    const day = today.getDate();
+    const month = months[today.getMonth()];
+    return `Hoje é ${dayOfWeek}, ${day} de ${month}.`;
+  };
+
+  // Get today's pending tasks count
+  const getTodayPendingTasksCount = () => {
+    const today = new Date().toISOString().split('T')[0];
+    return tasks.filter((task) => {
+      if (!task.due_date) return false;
+      const taskDate = task.due_date.split('T')[0];
+      return taskDate === today && !task.completed;
+    }).length;
+  };
+
   // Initialize theme based on preference or system
   useEffect(() => {
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -340,10 +361,14 @@ function App() {
             <div className="animate-fade-in-up">
               <h2 className="text-3xl font-bold tracking-tight">{getGreeting()}, {userName} ⚡️</h2>
               <p className="text-muted-foreground mt-1">
-                Hoje é segunda-feira, 15 de Maio.
+                {getTodayFormatted()}
               </p>
               <p className="text-muted-foreground">
-                Você tem 5 tarefas para concluir hoje.
+                {getTodayPendingTasksCount() === 0
+                  ? 'Você não tem tarefas pendentes para hoje.'
+                  : getTodayPendingTasksCount() === 1
+                  ? 'Você tem 1 tarefa para concluir hoje.'
+                  : `Você tem ${getTodayPendingTasksCount()} tarefas para concluir hoje.`}
               </p>
             </div>
 
