@@ -79,7 +79,10 @@ function App() {
             <div className="animate-fade-in-up">
               <h2 className="text-3xl font-bold tracking-tight">Bom dia, Ricardo 👋</h2>
               <p className="text-muted-foreground mt-1">
-                Hoje é segunda-feira, 15 de Maio. Você tem 5 tarefas para concluir hoje.
+                Hoje é segunda-feira, 15 de Maio.
+              </p>
+              <p className="text-muted-foreground">
+                Você tem 5 tarefas para concluir hoje.
               </p>
             </div>
 
