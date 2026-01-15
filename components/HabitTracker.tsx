@@ -306,12 +306,12 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
                               ${done
                                 ? isScheduledDay
                                   ? 'bg-primary hover:ring-2 hover:ring-primary/50'
-                                  : 'bg-primary/50 hover:ring-2 hover:ring-primary/30'
+                                  : 'bg-primary/60 hover:ring-2 hover:ring-primary/30'
                                 : isMissedDay
                                   ? 'bg-red-500/20 border border-red-500/40 hover:ring-2 hover:ring-red-500/50'
                                   : isScheduledDay
                                     ? 'bg-muted hover:bg-muted/80 hover:ring-2 hover:ring-primary/50'
-                                    : 'bg-muted/30 hover:bg-muted/50 hover:ring-2 hover:ring-muted-foreground/30'
+                                    : 'bg-muted/50 border border-dashed border-muted-foreground/30 hover:bg-muted/70 hover:ring-2 hover:ring-muted-foreground/30'
                               }
                             `}
                             title={
