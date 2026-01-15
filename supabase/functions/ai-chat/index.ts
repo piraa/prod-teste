@@ -18,7 +18,7 @@ const functionDeclarations = [
   // QUERY FUNCTIONS
   {
     name: 'get_tasks',
-    description: 'Retrieve user tasks. Can filter by single date, date range, completion status, or priority.',
+    description: 'Retrieve user tasks. Can filter by single date, date range, completion status, priority, or whether they have time estimates.',
     parameters: {
       type: 'object',
       properties: {
@@ -27,6 +27,8 @@ const functionDeclarations = [
         end_date: { type: 'string', description: 'End date for range filter (YYYY-MM-DD). Use with start_date for custom ranges.' },
         completed: { type: 'boolean', description: 'Filter by completion status' },
         priority: { type: 'string', enum: ['low', 'medium', 'high'], description: 'Filter by priority' },
+        has_estimated_minutes: { type: 'boolean', description: 'Filter by whether task has estimated_minutes set. true = only tasks with estimates, false = only tasks without estimates.' },
+        has_start_time: { type: 'boolean', description: 'Filter by whether task has start_time set.' },
         limit: { type: 'number', description: 'Maximum number of tasks to return' },
       },
     },
@@ -317,6 +319,20 @@ async function executeFunction(
       }
       if (args.priority) {
         query = query.eq('priority', args.priority);
+      }
+      if (args.has_estimated_minutes !== undefined) {
+        if (args.has_estimated_minutes) {
+          query = query.not('estimated_minutes', 'is', null);
+        } else {
+          query = query.is('estimated_minutes', null);
+        }
+      }
+      if (args.has_start_time !== undefined) {
+        if (args.has_start_time) {
+          query = query.not('start_time', 'is', null);
+        } else {
+          query = query.is('start_time', null);
+        }
       }
 
       const { data, error } = await query.order('due_date', { ascending: true }).limit(args.limit as number || 50);
