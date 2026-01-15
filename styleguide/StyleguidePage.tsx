@@ -239,20 +239,31 @@ export const StyleguidePage: React.FC<StyleguidePageProps> = ({
     <div className="space-y-12">
       <SectionHeader
         title="Typography"
-        description="Inter font family with carefully crafted type scale."
+        description="Geist font family with carefully crafted type scale."
       />
 
       {/* Font Family */}
       <div>
-        <SubsectionHeader title="Font Family" />
-        <div className="bg-card border border-border rounded-lg p-6">
-          <p className="text-4xl font-bold mb-2">Inter</p>
-          <p className="text-muted-foreground">
-            A carefully crafted open-source typeface designed for screen.
-          </p>
-          <p className="text-sm text-muted-foreground mt-2 font-mono">
-            font-family: "Inter", sans-serif;
-          </p>
+        <SubsectionHeader title="Font Families" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-card border border-border rounded-lg p-6">
+            <p className="text-4xl font-bold mb-2">Geist</p>
+            <p className="text-muted-foreground">
+              Sans-serif font for UI text, headings, and body content.
+            </p>
+            <p className="text-sm text-muted-foreground mt-2 font-mono">
+              font-family: "Geist", sans-serif;
+            </p>
+          </div>
+          <div className="bg-card border border-border rounded-lg p-6">
+            <p className="text-4xl font-bold mb-2 font-mono">Geist Mono</p>
+            <p className="text-muted-foreground">
+              Monospace font for code, technical content, and data.
+            </p>
+            <p className="text-sm text-muted-foreground mt-2 font-mono">
+              font-family: "Geist Mono", monospace;
+            </p>
+          </div>
         </div>
       </div>
 
