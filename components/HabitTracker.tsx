@@ -42,12 +42,12 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
 
-  // Generate the last 7 days (today is the last one)
-  const last7Days = useMemo(() => {
+  // Generate the last 4 days (today is the last one)
+  const last4Days = useMemo(() => {
     const days: { date: string; dayLabel: string; dayCode: string }[] = [];
     const today = new Date();
 
-    for (let i = 6; i >= 0; i--) {
+    for (let i = 3; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
       const dateStr = d.toISOString().split('T')[0];
@@ -77,7 +77,7 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
 
   // Calculate history for a habit (last 7 days)
   const getHabitHistory = (habitId: string): boolean[] => {
-    return last7Days.map(({ date }) => {
+    return last4Days.map(({ date }) => {
       const log = habitLogs.find(
         (l) => l.habit_id === habitId && l.logged_date === date
       );
@@ -181,7 +181,7 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
   };
 
   const handleToggle = async (habitId: string, dayIndex: number) => {
-    const { date } = last7Days[dayIndex];
+    const { date } = last4Days[dayIndex];
     const history = getHabitHistory(habitId);
     const currentValue = history[dayIndex];
     await onToggleHabit(habitId, date, !currentValue);
@@ -235,7 +235,7 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
             </button>
           </div>
           <div className="flex gap-1 sm:gap-1.5 self-end sm:self-auto">
-            {last7Days.map((day, i) => (
+            {last4Days.map((day, i) => (
               <span key={i} className="text-[10px] font-bold text-muted-foreground w-5 sm:w-6 text-center">
                 {day.dayLabel}
               </span>
@@ -290,7 +290,7 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
                     </div>
                     <div className="flex gap-1 sm:gap-1.5 flex-shrink-0">
                       {history.map((done, index) => {
-                        const dayInfo = last7Days[index];
+                        const dayInfo = last4Days[index];
                         const isScheduledDay = isDayEnabledForHabit(habit, dayInfo.dayCode);
                         const todayStr = new Date().toISOString().split('T')[0];
                         const isPastDay = dayInfo.date < todayStr;
