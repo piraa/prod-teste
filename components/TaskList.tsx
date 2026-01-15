@@ -24,6 +24,11 @@ export const TaskList: React.FC<TaskListProps> = ({
   const pendingTasks = tasks.filter((task) => !task.completed);
   const completedTasks = tasks.filter((task) => task.completed);
 
+  // Calculate progress percentage
+  const totalTasks = tasks.length;
+  const completedCount = completedTasks.length;
+  const progressPercent = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
+
   const handleQuickAdd = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && quickTaskTitle.trim() && onQuickAdd) {
       setIsAdding(true);
@@ -142,6 +147,24 @@ export const TaskList: React.FC<TaskListProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Progress Bar */}
+      {totalTasks > 0 && (
+        <div className="px-6 pt-4">
+          <div className="flex items-center justify-between text-xs mb-2">
+            <span className="text-muted-foreground">
+              {completedCount} de {totalTasks} tarefas concluídas
+            </span>
+            <span className="font-semibold text-primary">{progressPercent}%</span>
+          </div>
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="p-6 space-y-5">
         {pendingTasks.map((task) => (
