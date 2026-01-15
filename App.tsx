@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { StatCard } from './components/StatCard';
@@ -9,6 +9,8 @@ import { GoalsWidget } from './components/GoalsWidget';
 import { TaskModal } from './components/TaskModal';
 import { AuthPage } from './components/AuthPage';
 import { StyleguidePage } from './styleguide';
+import { ChatCenterbar } from './components/ai-chat';
+import { ChatProvider } from './contexts/ChatContext';
 import { CheckCircle2, Flame, TrendingUp, Timer, Loader2 } from 'lucide-react';
 import { Task, Habit, HabitLog, Goal } from './types';
 import { supabase } from './lib/supabase';
@@ -429,6 +431,23 @@ function App() {
     }
   };
 
+  // Callback for AI chat to update data after modifications
+  const handleDataUpdated = useCallback((updatedData: {
+    tasks?: Task[];
+    habits?: Habit[];
+    habitLogs?: HabitLog[];
+  }) => {
+    if (updatedData.tasks) {
+      setTasks(updatedData.tasks);
+    }
+    if (updatedData.habits) {
+      setHabits(updatedData.habits);
+    }
+    if (updatedData.habitLogs) {
+      setHabitLogs(updatedData.habitLogs);
+    }
+  }, []);
+
   // Filter tasks by selected date
   const filteredTasks = tasks.filter((task) => {
     if (!task.due_date) return false;
@@ -509,6 +528,7 @@ function App() {
   }
 
   return (
+    <ChatProvider onDataUpdated={handleDataUpdated} userName={userName}>
     <div className="flex h-screen bg-background overflow-hidden text-foreground">
       {/* Sidebar Overlay for Mobile */}
       {sidebarOpen && (
@@ -604,7 +624,10 @@ function App() {
         onDelete={handleDeleteTask}
         task={editingTask}
       />
+
+      <ChatCenterbar />
     </div>
+    </ChatProvider>
   );
 }
 
