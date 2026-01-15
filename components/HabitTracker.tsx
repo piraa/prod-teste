@@ -303,7 +303,7 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
                             key={index}
                             onClick={() => handleToggle(habit.id, index)}
                             className={`
-                              ${isToday ? 'w-6 h-6 sm:w-7 sm:h-7' : 'w-4 h-4 sm:w-5 sm:h-5'} rounded-md transition-all cursor-pointer
+                              ${isToday ? 'w-6 h-6 sm:w-7 sm:h-7 ring-2 ring-primary/60 ring-offset-1 ring-offset-background' : 'w-4 h-4 sm:w-5 sm:h-5'} rounded-md transition-all cursor-pointer
                               ${done
                                 ? isScheduledDay
                                   ? 'bg-primary hover:ring-2 hover:ring-primary/50'
