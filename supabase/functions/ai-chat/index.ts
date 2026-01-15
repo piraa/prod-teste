@@ -1,6 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { GoogleGenerativeAI } from 'https://esm.sh/@google/generative-ai@0.21.0';
+
+// Gemini API via REST (mais confiável que SDK no Deno)
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -704,51 +706,89 @@ serve(async (req) => {
       });
     }
 
-    // 3. Initialize Gemini
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-      tools: [{ functionDeclarations }],
-      systemInstruction: getSystemPrompt(context),
-    });
+    // 3. Build Gemini request
+    const geminiUrl = `${GEMINI_API_BASE}/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
-    // 4. Start chat with history
-    const chat = model.startChat({
-      history: history || [],
-    });
+    // Build conversation contents
+    const contents = [
+      ...(history || []).map((h: { role: string; parts: { text: string }[] }) => ({
+        role: h.role,
+        parts: h.parts,
+      })),
+      { role: 'user', parts: [{ text: message }] },
+    ];
 
-    // 5. Send message and process response
-    let result = await chat.sendMessage(message);
     const actions: FunctionResult['action'][] = [];
     let hasDataChanges = false;
+    let responseText = '';
 
-    // Process function calls if any
-    while (result.response.functionCalls && result.response.functionCalls().length > 0) {
-      const functionCalls = result.response.functionCalls();
-      const functionResponses = [];
+    // 4. Make initial request to Gemini
+    let geminiResponse = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents,
+        tools: [{ functionDeclarations }],
+        systemInstruction: { parts: [{ text: getSystemPrompt(context) }] },
+      }),
+    });
 
-      for (const call of functionCalls) {
-        const funcResult = await executeFunction(call.name, call.args || {}, user.id, supabase);
-        actions.push(funcResult.action);
-        functionResponses.push({
+    if (!geminiResponse.ok) {
+      const errorText = await geminiResponse.text();
+      console.error('Gemini API error:', errorText);
+      throw new Error(`Gemini API error: ${geminiResponse.status}`);
+    }
+
+    let geminiData = await geminiResponse.json();
+
+    // 5. Process function calls if any
+    while (geminiData.candidates?.[0]?.content?.parts?.[0]?.functionCall) {
+      const functionCall = geminiData.candidates[0].content.parts[0].functionCall;
+      const funcResult = await executeFunction(functionCall.name, functionCall.args || {}, user.id, supabase);
+      actions.push(funcResult.action);
+
+      // Track if we made data changes
+      if (['create', 'update', 'delete'].includes(funcResult.action.type)) {
+        hasDataChanges = true;
+      }
+
+      // Add function call and response to contents
+      contents.push({
+        role: 'model',
+        parts: [{ functionCall }],
+      });
+      contents.push({
+        role: 'function',
+        parts: [{
           functionResponse: {
             name: funcResult.name,
             response: funcResult.response,
           },
-        });
+        }],
+      });
 
-        // Track if we made data changes
-        if (['create', 'update', 'delete'].includes(funcResult.action.type)) {
-          hasDataChanges = true;
-        }
+      // Send function result back to Gemini
+      geminiResponse = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents,
+          tools: [{ functionDeclarations }],
+          systemInstruction: { parts: [{ text: getSystemPrompt(context) }] },
+        }),
+      });
+
+      if (!geminiResponse.ok) {
+        const errorText = await geminiResponse.text();
+        console.error('Gemini API error:', errorText);
+        throw new Error(`Gemini API error: ${geminiResponse.status}`);
       }
 
-      // Send function results back to Gemini
-      result = await chat.sendMessage(functionResponses);
+      geminiData = await geminiResponse.json();
     }
 
     // 6. Get final text response
-    const responseText = result.response.text();
+    responseText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || 'Desculpe, não consegui processar sua solicitação.';
 
     // 7. Fetch updated data if changes were made
     let updatedData = null;
