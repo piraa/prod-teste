@@ -360,10 +360,10 @@ function App() {
             {/* Welcome Section */}
             <div className="animate-fade-in-up">
               <h2 className="text-3xl font-bold tracking-tight">{getGreeting()}, {userName} ⚡️</h2>
-              <p className="text-muted-foreground mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 {getTodayFormatted()}
               </p>
-              <p className="text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {getTodayPendingTasksCount() === 0
                   ? 'Você não tem tarefas pendentes para hoje.'
                   : getTodayPendingTasksCount() === 1
