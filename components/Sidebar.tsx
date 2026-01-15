@@ -6,17 +6,15 @@ import {
   Flag,
   StickyNote,
   BarChart2,
-  Zap,
-  Palette
+  Zap
 } from 'lucide-react';
 
 interface SidebarProps {
   userAvatar: string;
   isOpen: boolean;
-  onOpenStyleguide?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ userAvatar, isOpen, onOpenStyleguide }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ userAvatar, isOpen }) => {
   const containerClasses = `
     fixed lg:static inset-y-0 left-0 z-30
     w-64 bg-sidebar text-sidebar-foreground
@@ -42,10 +40,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ userAvatar, isOpen, onOpenStyl
           <NavItem icon={Flag} label="Objetivos" />
           <NavItem icon={StickyNote} label="Anotações" />
           <NavItem icon={BarChart2} label="Análises" />
-
-          <div className="pt-4 mt-4 border-t border-sidebar-border">
-            <NavItem icon={Palette} label="Design System" onClick={onOpenStyleguide} />
-          </div>
         </nav>
       </div>
 

@@ -36,7 +36,6 @@ function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
-  const [isStyleguideOpen, setIsStyleguideOpen] = useState(false);
   const [userName, setUserName] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
@@ -219,20 +218,20 @@ function App() {
     );
   }
 
-  // Show auth page if not logged in
-  if (!user) {
-    return <AuthPage />;
-  }
-
-  // Show styleguide if open
-  if (isStyleguideOpen) {
+  // Show styleguide if URL is /styleguide (dev only)
+  if (window.location.pathname === '/styleguide') {
     return (
       <StyleguidePage
         isDark={isDark}
         onToggleTheme={() => setIsDark(!isDark)}
-        onClose={() => setIsStyleguideOpen(false)}
+        onClose={() => window.location.href = '/'}
       />
     );
+  }
+
+  // Show auth page if not logged in
+  if (!user) {
+    return <AuthPage />;
   }
 
   return (
@@ -245,11 +244,7 @@ function App() {
         />
       )}
 
-      <Sidebar
-        userAvatar={AVATAR_URL}
-        isOpen={sidebarOpen}
-        onOpenStyleguide={() => setIsStyleguideOpen(true)}
-      />
+      <Sidebar userAvatar={AVATAR_URL} isOpen={sidebarOpen} />
 
       <div className="flex-1 flex flex-col h-screen w-full relative">
         <Header
