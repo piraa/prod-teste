@@ -5,9 +5,10 @@ interface HeaderProps {
   toggleSidebar: () => void;
   toggleTheme: () => void;
   isDark: boolean;
+  onNewTask: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ toggleSidebar, toggleTheme, isDark }) => {
+export const Header: React.FC<HeaderProps> = ({ toggleSidebar, toggleTheme, isDark, onNewTask }) => {
   return (
     <header className="h-16 border-b border-border bg-background/80 backdrop-blur-md px-6 lg:px-8 flex items-center justify-between z-20 sticky top-0">
       <div className="flex items-center gap-4 text-muted-foreground">
@@ -34,7 +35,10 @@ export const Header: React.FC<HeaderProps> = ({ toggleSidebar, toggleTheme, isDa
           <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-destructive border-2 border-background rounded-full"></span>
         </button>
 
-        <button className="bg-primary hover:brightness-105 text-primary-foreground px-3 sm:px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 shadow-sm transition-all">
+        <button
+          onClick={onNewTask}
+          className="bg-primary hover:brightness-105 text-primary-foreground px-3 sm:px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 shadow-sm transition-all"
+        >
           <Plus size={18} />
           <span className="hidden sm:inline">Nova Tarefa</span>
         </button>

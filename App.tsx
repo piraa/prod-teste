@@ -6,6 +6,7 @@ import { TaskList } from './components/TaskList';
 import { HabitTracker } from './components/HabitTracker';
 import { CalendarWidget } from './components/CalendarWidget';
 import { GoalsWidget } from './components/GoalsWidget';
+import { NewTaskModal } from './components/NewTaskModal';
 import { CheckCircle2, Flame, TrendingUp, Timer } from 'lucide-react';
 import { Task, Habit, Goal } from './types';
 import { supabase } from './lib/supabase';
@@ -30,6 +31,7 @@ function App() {
   const [isDark, setIsDark] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(true);
+  const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
 
   // Fetch tasks from Supabase
   useEffect(() => {
@@ -49,6 +51,34 @@ function App() {
 
     fetchTasks();
   }, []);
+
+  // Add new task to Supabase
+  const handleAddTask = async (taskData: {
+    title: string;
+    description: string;
+    priority: 'low' | 'medium' | 'high';
+    due_date: string | null;
+  }) => {
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert([
+        {
+          title: taskData.title,
+          description: taskData.description || null,
+          priority: taskData.priority,
+          due_date: taskData.due_date,
+          completed: false,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Erro ao criar tarefa:', error);
+    } else if (data) {
+      setTasks((prev) => [...prev, data]);
+    }
+  };
 
   // Initialize theme based on preference or system
   useEffect(() => {
@@ -80,10 +110,11 @@ function App() {
       <Sidebar userAvatar={AVATAR_URL} isOpen={sidebarOpen} />
 
       <div className="flex-1 flex flex-col h-screen w-full relative">
-        <Header 
-          toggleSidebar={() => setSidebarOpen(!sidebarOpen)} 
+        <Header
+          toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           toggleTheme={() => setIsDark(!isDark)}
           isDark={isDark}
+          onNewTask={() => setIsNewTaskModalOpen(true)}
         />
 
         <main className="flex-1 overflow-y-auto custom-scrollbar p-4 lg:p-8">
@@ -125,6 +156,12 @@ function App() {
           </div>
         </main>
       </div>
+
+      <NewTaskModal
+        isOpen={isNewTaskModalOpen}
+        onClose={() => setIsNewTaskModalOpen(false)}
+        onSave={handleAddTask}
+      />
     </div>
   );
 }
