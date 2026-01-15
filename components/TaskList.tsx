@@ -8,7 +8,7 @@ interface TaskListProps {
 
 export const TaskList: React.FC<TaskListProps> = ({ tasks }) => {
   return (
-    <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm overflow-hidden flex flex-col h-full">
+    <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm overflow-hidden flex flex-col h-fit">
       <div className="p-6 border-b border-border flex items-center justify-between">
         <h3 className="font-bold flex items-center gap-2">
           <ListTodo className="text-primary" size={20} />
