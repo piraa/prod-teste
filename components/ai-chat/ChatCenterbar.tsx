@@ -78,7 +78,13 @@ export const ChatCenterbar: React.FC = () => {
             />
           ) : (
             <form onSubmit={handleSubmit} className="flex items-center h-full px-4 gap-3">
-              <Sparkles className="w-5 h-5 text-primary flex-shrink-0" />
+              <button
+                type="button"
+                onClick={() => setIsExpanded(true)}
+                className="flex-shrink-0 hover:scale-110 transition-transform"
+              >
+                <Sparkles className="w-5 h-5 text-primary" />
+              </button>
               <input
                 ref={inputRef}
                 type="text"
