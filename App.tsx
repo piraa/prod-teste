@@ -83,38 +83,6 @@ function App() {
               </p>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <StatCard 
-                label="Tarefas Completas" 
-                value="128" 
-                trendLabel="+12% vs ontem" 
-                trendColorClass="text-green-500 bg-green-500/10"
-                icon={<CheckCircle2 size={24} />}
-              />
-              <StatCard 
-                label="Foco Diário (Streak)" 
-                value="15 Dias" 
-                trendLabel="Recorde!" 
-                trendColorClass="text-primary bg-primary/10"
-                icon={<Flame size={24} />}
-              />
-              <StatCard 
-                label="Produtividade" 
-                value="92%" 
-                trendLabel="85% da meta" 
-                trendColorClass="text-blue-500 bg-blue-500/10"
-                icon={<TrendingUp size={24} />}
-              />
-              <StatCard 
-                label="Tempo Focado" 
-                value="24.5h" 
-                trendLabel="Total acumulado" 
-                trendColorClass="text-muted-foreground bg-muted"
-                icon={<Timer size={24} />}
-              />
-            </div>
-
             {/* Main Content Grid */}
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
               
