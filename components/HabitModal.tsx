@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Trash2 } from 'lucide-react';
+import { X, Trash2, Target } from 'lucide-react';
 import { Habit } from '../types';
 
 interface HabitModalProps {
@@ -10,6 +10,8 @@ interface HabitModalProps {
     description: string;
     frequency: 'daily' | 'weekdays' | 'custom';
     target_days: string[] | null;
+    goal_target: number | null;
+    goal_period: 'weekly' | 'monthly' | null;
   }) => Promise<void>;
   onDelete?: (habitId: string) => Promise<void>;
   habit?: Habit | null;
@@ -36,6 +38,9 @@ export const HabitModal: React.FC<HabitModalProps> = ({
   const [description, setDescription] = useState('');
   const [frequency, setFrequency] = useState<'daily' | 'weekdays' | 'custom'>('daily');
   const [targetDays, setTargetDays] = useState<string[]>([]);
+  const [hasGoal, setHasGoal] = useState(false);
+  const [goalTarget, setGoalTarget] = useState<number | null>(null);
+  const [goalPeriod, setGoalPeriod] = useState<'weekly' | 'monthly'>('monthly');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -48,11 +53,17 @@ export const HabitModal: React.FC<HabitModalProps> = ({
       setDescription(habit.description || '');
       setFrequency(habit.frequency);
       setTargetDays(habit.target_days || []);
+      setHasGoal(!!habit.goal_target);
+      setGoalTarget(habit.goal_target);
+      setGoalPeriod(habit.goal_period || 'monthly');
     } else {
       setTitle('');
       setDescription('');
       setFrequency('daily');
       setTargetDays([]);
+      setHasGoal(false);
+      setGoalTarget(null);
+      setGoalPeriod('monthly');
     }
   }, [habit, isOpen]);
 
@@ -69,6 +80,8 @@ export const HabitModal: React.FC<HabitModalProps> = ({
       frequency,
       target_days: frequency === 'custom' ? targetDays :
                    frequency === 'weekdays' ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] : null,
+      goal_target: hasGoal ? goalTarget : null,
+      goal_period: hasGoal ? goalPeriod : null,
     });
     setSaving(false);
     onClose();
@@ -117,7 +130,7 @@ export const HabitModal: React.FC<HabitModalProps> = ({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: Meditar 10 minutos"
+              placeholder="Ex: Treino de Jiu-Jitsu"
               className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               required
             />
@@ -185,6 +198,76 @@ export const HabitModal: React.FC<HabitModalProps> = ({
               </div>
             </div>
           )}
+
+          {/* Meta */}
+          <div className="border-t border-border pt-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={hasGoal}
+                onChange={(e) => setHasGoal(e.target.checked)}
+                className="w-4 h-4 rounded border-input text-primary focus:ring-primary"
+              />
+              <Target size={16} className="text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">Definir meta</span>
+            </label>
+
+            {hasGoal && (
+              <div className="mt-3 space-y-3">
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="block text-xs text-muted-foreground mb-1">
+                      Quantidade
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={goalTarget || ''}
+                      onChange={(e) => setGoalTarget(e.target.value ? parseInt(e.target.value) : null)}
+                      placeholder="Ex: 20"
+                      className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs text-muted-foreground mb-1">
+                      Período
+                    </label>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setGoalPeriod('weekly')}
+                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          goalPeriod === 'weekly'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground hover:bg-accent'
+                        }`}
+                      >
+                        Semana
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setGoalPeriod('monthly')}
+                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          goalPeriod === 'monthly'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground hover:bg-accent'
+                        }`}
+                      >
+                        Mês
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {goalTarget && goalPeriod === 'monthly'
+                    ? `Meta: ${goalTarget} vezes por mês`
+                    : goalTarget && goalPeriod === 'weekly'
+                    ? `Meta: ${goalTarget} vezes por semana`
+                    : 'Defina quantas vezes deseja completar este hábito'}
+                </p>
+              </div>
+            )}
+          </div>
 
           <div className="flex gap-3 pt-2">
             {isEditing && onDelete && (

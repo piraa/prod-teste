@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { History, Plus, Flame } from 'lucide-react';
+import { History, Plus, Flame, Target } from 'lucide-react';
 import { Habit, HabitLog } from '../types';
 import { HabitModal } from './HabitModal';
 
@@ -12,12 +12,16 @@ interface HabitTrackerProps {
     description: string;
     frequency: 'daily' | 'weekdays' | 'custom';
     target_days: string[] | null;
+    goal_target: number | null;
+    goal_period: 'weekly' | 'monthly' | null;
   }) => Promise<void>;
   onUpdateHabit: (habitId: string, habitData: {
     title: string;
     description: string;
     frequency: 'daily' | 'weekdays' | 'custom';
     target_days: string[] | null;
+    goal_target: number | null;
+    goal_period: 'weekly' | 'monthly' | null;
   }) => Promise<void>;
   onDeleteHabit: (habitId: string) => Promise<void>;
 }
@@ -88,8 +92,47 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
     return streak;
   };
 
+  // Calculate goal progress for a habit
+  const calculateGoalProgress = (habit: Habit): { current: number; target: number } | null => {
+    if (!habit.goal_target || !habit.goal_period) return null;
+
+    const today = new Date();
+    let startDate: Date;
+
+    if (habit.goal_period === 'weekly') {
+      // Start of current week (Sunday)
+      startDate = new Date(today);
+      startDate.setDate(today.getDate() - today.getDay());
+    } else {
+      // Start of current month
+      startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+    }
+
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const todayStr = today.toISOString().split('T')[0];
+
+    const completedCount = habitLogs.filter(
+      (l) =>
+        l.habit_id === habit.id &&
+        l.completed &&
+        l.logged_date >= startDateStr &&
+        l.logged_date <= todayStr
+    ).length;
+
+    return { current: completedCount, target: habit.goal_target };
+  };
+
   // Get frequency label
   const getFrequencyLabel = (habit: Habit): string => {
+    // If has goal, show goal progress instead
+    if (habit.goal_target && habit.goal_period) {
+      const progress = calculateGoalProgress(habit);
+      if (progress) {
+        const periodLabel = habit.goal_period === 'weekly' ? 'semana' : 'mês';
+        return `${progress.current}/${progress.target} este ${periodLabel}`;
+      }
+    }
+
     switch (habit.frequency) {
       case 'daily':
         return 'Todos os dias';
@@ -136,6 +179,8 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
     description: string;
     frequency: 'daily' | 'weekdays' | 'custom';
     target_days: string[] | null;
+    goal_target: number | null;
+    goal_period: 'weekly' | 'monthly' | null;
   }) => {
     if (editingHabit) {
       await onUpdateHabit(editingHabit.id, habitData);
@@ -187,43 +232,70 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
             habits.map((habit) => {
               const history = getHabitHistory(habit.id);
               const streak = calculateStreak(habit.id);
+              const goalProgress = calculateGoalProgress(habit);
 
               return (
-                <div key={habit.id} className="flex items-center justify-between">
-                  <div
-                    className="flex flex-col flex-1 min-w-0 mr-4 cursor-pointer"
-                    onClick={() => handleEditHabit(habit)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold truncate">{habit.title}</span>
-                      {streak > 0 && (
-                        <span className="flex items-center gap-0.5 text-xs text-orange-500 font-medium">
-                          <Flame size={12} />
-                          {streak}
-                        </span>
-                      )}
+                <div key={habit.id} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div
+                      className="flex flex-col flex-1 min-w-0 mr-4 cursor-pointer"
+                      onClick={() => handleEditHabit(habit)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold truncate">{habit.title}</span>
+                        {streak > 0 && (
+                          <span className="flex items-center gap-0.5 text-xs text-orange-500 font-medium">
+                            <Flame size={12} />
+                            {streak}
+                          </span>
+                        )}
+                        {goalProgress && (
+                          <span className="flex items-center gap-0.5 text-xs text-primary font-medium">
+                            <Target size={12} />
+                            {goalProgress.current >= goalProgress.target ? '✓' : ''}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground truncate">
+                        {getFrequencyLabel(habit)}
+                      </span>
                     </div>
-                    <span className="text-xs text-muted-foreground truncate">
-                      {getFrequencyLabel(habit)}
-                    </span>
+                    <div className="flex gap-1 sm:gap-1.5 flex-shrink-0">
+                      {history.map((done, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleToggle(habit.id, index)}
+                          className={`
+                            w-5 h-5 sm:w-6 sm:h-6 rounded-md transition-all cursor-pointer
+                            hover:ring-2 hover:ring-primary/50
+                            ${done
+                              ? 'bg-primary'
+                              : 'bg-muted hover:bg-muted/80'
+                            }
+                          `}
+                          title={`${last7Days[index].date} - ${done ? 'Completo' : 'Não completo'}`}
+                        />
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex gap-1 sm:gap-1.5 flex-shrink-0">
-                    {history.map((done, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleToggle(habit.id, index)}
-                        className={`
-                          w-5 h-5 sm:w-6 sm:h-6 rounded-md transition-all cursor-pointer
-                          hover:ring-2 hover:ring-primary/50
-                          ${done
-                            ? 'bg-primary'
-                            : 'bg-muted hover:bg-muted/80'
-                          }
-                        `}
-                        title={`${last7Days[index].date} - ${done ? 'Completo' : 'Não completo'}`}
-                      />
-                    ))}
-                  </div>
+
+                  {/* Progress bar for goals */}
+                  {goalProgress && (
+                    <div className="ml-0">
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            goalProgress.current >= goalProgress.target
+                              ? 'bg-green-500'
+                              : 'bg-primary'
+                          }`}
+                          style={{
+                            width: `${Math.min((goalProgress.current / goalProgress.target) * 100, 100)}%`
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })

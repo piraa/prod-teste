@@ -116,7 +116,7 @@ function App() {
     fetchHabits();
   }, [user]);
 
-  // Fetch habit logs for the last 7 days
+  // Fetch habit logs for goal progress calculation (from start of month or week)
   useEffect(() => {
     if (!user || habits.length === 0) {
       return;
@@ -124,9 +124,9 @@ function App() {
 
     async function fetchHabitLogs() {
       const today = new Date();
-      const sevenDaysAgo = new Date(today);
-      sevenDaysAgo.setDate(today.getDate() - 6);
-      const startDate = sevenDaysAgo.toISOString().split('T')[0];
+      // Get start of current month to include all data needed for monthly goals
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const startDate = startOfMonth.toISOString().split('T')[0];
 
       const { data, error } = await supabase
         .from('habit_logs')
@@ -349,6 +349,8 @@ function App() {
     description: string;
     frequency: 'daily' | 'weekdays' | 'custom';
     target_days: string[] | null;
+    goal_target: number | null;
+    goal_period: 'weekly' | 'monthly' | null;
   }) => {
     if (!user) return;
 
@@ -362,6 +364,8 @@ function App() {
         target_days: habitData.target_days,
         color: 'primary',
         is_active: true,
+        goal_target: habitData.goal_target,
+        goal_period: habitData.goal_period,
       }])
       .select()
       .single();
@@ -379,6 +383,8 @@ function App() {
     description: string;
     frequency: 'daily' | 'weekdays' | 'custom';
     target_days: string[] | null;
+    goal_target: number | null;
+    goal_period: 'weekly' | 'monthly' | null;
   }) => {
     if (!user) return;
 
@@ -389,6 +395,8 @@ function App() {
         description: habitData.description || null,
         frequency: habitData.frequency,
         target_days: habitData.target_days,
+        goal_target: habitData.goal_target,
+        goal_period: habitData.goal_period,
       })
       .eq('id', habitId)
       .eq('user_id', user.id)
