@@ -18,11 +18,13 @@ const functionDeclarations = [
   // QUERY FUNCTIONS
   {
     name: 'get_tasks',
-    description: 'Retrieve user tasks. Can filter by date, completion status, or priority.',
+    description: 'Retrieve user tasks. Can filter by single date, date range, completion status, or priority.',
     parameters: {
       type: 'object',
       properties: {
-        date: { type: 'string', description: 'Filter by date (YYYY-MM-DD). Use "today" for current date, "tomorrow" for next day.' },
+        date: { type: 'string', description: 'Filter by specific date (YYYY-MM-DD). Use "today", "tomorrow", "this_week", "next_week", "this_month".' },
+        start_date: { type: 'string', description: 'Start date for range filter (YYYY-MM-DD). Use with end_date for custom ranges.' },
+        end_date: { type: 'string', description: 'End date for range filter (YYYY-MM-DD). Use with start_date for custom ranges.' },
         completed: { type: 'boolean', description: 'Filter by completion status' },
         priority: { type: 'string', enum: ['low', 'medium', 'high'], description: 'Filter by priority' },
         limit: { type: 'number', description: 'Maximum number of tasks to return' },
@@ -104,7 +106,7 @@ const functionDeclarations = [
   },
   {
     name: 'update_task',
-    description: 'Update an existing task.',
+    description: 'Update an existing task. Can update title, description, priority, due date, times, and estimated duration.',
     parameters: {
       type: 'object',
       properties: {
@@ -113,7 +115,10 @@ const functionDeclarations = [
         title: { type: 'string', description: 'New title' },
         description: { type: 'string', description: 'New description' },
         priority: { type: 'string', enum: ['low', 'medium', 'high'] },
-        due_date: { type: 'string', description: 'New due date' },
+        due_date: { type: 'string', description: 'New due date (YYYY-MM-DD)' },
+        start_time: { type: 'string', description: 'Start time (HH:MM format, e.g., "14:00")' },
+        end_time: { type: 'string', description: 'End time (HH:MM format, e.g., "15:30")' },
+        estimated_minutes: { type: 'number', description: 'Estimated duration in minutes' },
         completed: { type: 'boolean', description: 'Completion status' },
       },
     },
@@ -220,6 +225,54 @@ function parseDate(dateStr: string | undefined): string | null {
   return dateStr;
 }
 
+function parseDateRange(dateStr: string): { start: string; end: string } | null {
+  const today = new Date();
+
+  if (dateStr === 'this_week' || dateStr === 'esta_semana') {
+    const startOfWeek = new Date(today);
+    const dayOfWeek = today.getDay();
+    startOfWeek.setDate(today.getDate() - dayOfWeek);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    return {
+      start: startOfWeek.toISOString().split('T')[0],
+      end: endOfWeek.toISOString().split('T')[0],
+    };
+  }
+
+  if (dateStr === 'next_week' || dateStr === 'proxima_semana' || dateStr === 'semana_que_vem') {
+    const startOfNextWeek = new Date(today);
+    const dayOfWeek = today.getDay();
+    startOfNextWeek.setDate(today.getDate() - dayOfWeek + 7);
+    const endOfNextWeek = new Date(startOfNextWeek);
+    endOfNextWeek.setDate(startOfNextWeek.getDate() + 6);
+    return {
+      start: startOfNextWeek.toISOString().split('T')[0],
+      end: endOfNextWeek.toISOString().split('T')[0],
+    };
+  }
+
+  if (dateStr === 'this_month' || dateStr === 'este_mes') {
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    return {
+      start: startOfMonth.toISOString().split('T')[0],
+      end: endOfMonth.toISOString().split('T')[0],
+    };
+  }
+
+  if (dateStr === 'next_7_days' || dateStr === 'proximos_7_dias') {
+    const endDate = new Date(today);
+    endDate.setDate(today.getDate() + 7);
+    return {
+      start: today.toISOString().split('T')[0],
+      end: endDate.toISOString().split('T')[0],
+    };
+  }
+
+  return null;
+}
+
 interface FunctionResult {
   name: string;
   response: Record<string, unknown>;
@@ -241,9 +294,23 @@ async function executeFunction(
     case 'get_tasks': {
       let query = supabase.from('tasks').select('*').eq('user_id', userId);
 
+      // Check for date range shortcuts first
       if (args.date) {
-        const date = parseDate(args.date as string);
-        if (date) query = query.eq('due_date', date);
+        const dateRange = parseDateRange(args.date as string);
+        if (dateRange) {
+          query = query.gte('due_date', dateRange.start).lte('due_date', dateRange.end);
+        } else {
+          const date = parseDate(args.date as string);
+          if (date) query = query.eq('due_date', date);
+        }
+      }
+      // Check for explicit date range
+      if (args.start_date && args.end_date) {
+        const startDate = parseDate(args.start_date as string);
+        const endDate = parseDate(args.end_date as string);
+        if (startDate && endDate) {
+          query = query.gte('due_date', startDate).lte('due_date', endDate);
+        }
       }
       if (args.completed !== undefined) {
         query = query.eq('completed', args.completed);
@@ -502,6 +569,9 @@ async function executeFunction(
       if (args.description !== undefined) updates.description = args.description;
       if (args.priority) updates.priority = args.priority;
       if (args.due_date) updates.due_date = parseDate(args.due_date as string);
+      if (args.start_time !== undefined) updates.start_time = args.start_time;
+      if (args.end_time !== undefined) updates.end_time = args.end_time;
+      if (args.estimated_minutes !== undefined) updates.estimated_minutes = args.estimated_minutes;
       if (args.completed !== undefined) {
         updates.completed = args.completed;
         if (args.completed) updates.completed_at = new Date().toISOString();
