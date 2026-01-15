@@ -48,6 +48,29 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
   const isEditing = !!task;
 
+  // Calculate estimated minutes from start and end time
+  const calculateEstimateFromTimes = (start: string, end: string): number | null => {
+    if (!start || !end) return null;
+    const [startHours, startMinutes] = start.split(':').map(Number);
+    const [endHours, endMinutes] = end.split(':').map(Number);
+    const startTotal = startHours * 60 + startMinutes;
+    const endTotal = endHours * 60 + endMinutes;
+    const diff = endTotal - startTotal;
+    return diff > 0 ? diff : null;
+  };
+
+  // Check if we have both times defined
+  const hasDefinedTimes = startTime && endTime;
+  const calculatedEstimate = calculateEstimateFromTimes(startTime, endTime);
+
+  // Format minutes to display string
+  const formatEstimate = (minutes: number): string => {
+    if (minutes < 60) return `${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours}h${mins}` : `${hours}h`;
+  };
+
   // Populate form when editing
   useEffect(() => {
     if (task) {
@@ -76,13 +99,18 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     e.preventDefault();
     if (!title.trim()) return;
 
+    // Use calculated estimate if times are defined, otherwise use manual estimate
+    const finalEstimate = hasDefinedTimes && calculatedEstimate
+      ? calculatedEstimate
+      : estimatedMinutes;
+
     setSaving(true);
     await onSave({
       title: title.trim(),
       description: description.trim(),
       priority,
       due_date: dueDate || null,
-      estimated_minutes: estimatedMinutes,
+      estimated_minutes: finalEstimate,
       start_time: startTime || null,
       end_time: endTime || null,
     });
@@ -220,22 +248,33 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             <label className="block text-sm font-medium text-foreground mb-1">
               Estimativa de Duração
             </label>
-            <div className="flex flex-wrap gap-2">
-              {ESTIMATE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setEstimatedMinutes(estimatedMinutes === opt.value ? null : opt.value)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    estimatedMinutes === opt.value
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground hover:bg-accent'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+            {hasDefinedTimes && calculatedEstimate ? (
+              <div className="px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg">
+                <span className="text-sm font-medium text-primary">
+                  {formatEstimate(calculatedEstimate)}
+                </span>
+                <span className="text-xs text-muted-foreground ml-2">
+                  (calculado automaticamente)
+                </span>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {ESTIMATE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setEstimatedMinutes(estimatedMinutes === opt.value ? null : opt.value)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      estimatedMinutes === opt.value
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground hover:bg-accent'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 pt-2">
