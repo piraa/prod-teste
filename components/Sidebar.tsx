@@ -4,6 +4,7 @@ import {
   CheckCircle2, 
   Activity, 
   Flag, 
+  StickyNote,
   BarChart2, 
   Zap 
 } from 'lucide-react';
@@ -37,6 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ userAvatar, isOpen }) => {
           <NavItem icon={CheckCircle2} label="Minhas Tarefas" />
           <NavItem icon={Activity} label="Hábitos" />
           <NavItem icon={Flag} label="Objetivos" />
+          <NavItem icon={StickyNote} label="Anotações" />
           <NavItem icon={BarChart2} label="Análises" />
         </nav>
       </div>
