@@ -1,20 +1,22 @@
 import React from 'react';
-import { 
-  LayoutDashboard, 
-  CheckCircle2, 
-  Activity, 
-  Flag, 
+import {
+  LayoutDashboard,
+  CheckCircle2,
+  Activity,
+  Flag,
   StickyNote,
-  BarChart2, 
-  Zap 
+  BarChart2,
+  Zap,
+  Palette
 } from 'lucide-react';
 
 interface SidebarProps {
   userAvatar: string;
   isOpen: boolean;
+  onOpenStyleguide?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ userAvatar, isOpen }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ userAvatar, isOpen, onOpenStyleguide }) => {
   const containerClasses = `
     fixed lg:static inset-y-0 left-0 z-30
     w-64 bg-sidebar text-sidebar-foreground
@@ -40,6 +42,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ userAvatar, isOpen }) => {
           <NavItem icon={Flag} label="Objetivos" />
           <NavItem icon={StickyNote} label="Anotações" />
           <NavItem icon={BarChart2} label="Análises" />
+
+          <div className="pt-4 mt-4 border-t border-sidebar-border">
+            <NavItem icon={Palette} label="Design System" onClick={onOpenStyleguide} />
+          </div>
         </nav>
       </div>
 
@@ -77,20 +83,29 @@ interface NavItemProps {
   icon: React.ElementType;
   label: string;
   active?: boolean;
+  onClick?: () => void;
 }
 
-const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, active }) => {
+const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, active, onClick }) => {
+  const className = `
+    flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-all duration-200 cursor-pointer
+    ${active
+      ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
+      : 'text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+    }
+  `;
+
+  if (onClick) {
+    return (
+      <button onClick={onClick} className={`w-full text-left ${className}`}>
+        <Icon size={20} strokeWidth={2} />
+        {label}
+      </button>
+    );
+  }
+
   return (
-    <a
-      href="#"
-      className={`
-        flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-all duration-200
-        ${active 
-          ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm' 
-          : 'text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-        }
-      `}
-    >
+    <a href="#" className={className}>
       <Icon size={20} strokeWidth={2} />
       {label}
     </a>

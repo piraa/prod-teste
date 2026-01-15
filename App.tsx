@@ -8,6 +8,7 @@ import { CalendarWidget } from './components/CalendarWidget';
 import { GoalsWidget } from './components/GoalsWidget';
 import { NewTaskModal } from './components/NewTaskModal';
 import { AuthPage } from './components/AuthPage';
+import { StyleguidePage } from './styleguide';
 import { CheckCircle2, Flame, TrendingUp, Timer, Loader2 } from 'lucide-react';
 import { Task, Habit, Goal } from './types';
 import { supabase } from './lib/supabase';
@@ -35,6 +36,7 @@ function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
+  const [isStyleguideOpen, setIsStyleguideOpen] = useState(false);
   const [userName, setUserName] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
@@ -222,6 +224,17 @@ function App() {
     return <AuthPage />;
   }
 
+  // Show styleguide if open
+  if (isStyleguideOpen) {
+    return (
+      <StyleguidePage
+        isDark={isDark}
+        onToggleTheme={() => setIsDark(!isDark)}
+        onClose={() => setIsStyleguideOpen(false)}
+      />
+    );
+  }
+
   return (
     <div className="flex h-screen bg-background overflow-hidden text-foreground">
       {/* Sidebar Overlay for Mobile */}
@@ -232,7 +245,11 @@ function App() {
         />
       )}
 
-      <Sidebar userAvatar={AVATAR_URL} isOpen={sidebarOpen} />
+      <Sidebar
+        userAvatar={AVATAR_URL}
+        isOpen={sidebarOpen}
+        onOpenStyleguide={() => setIsStyleguideOpen(true)}
+      />
 
       <div className="flex-1 flex flex-col h-screen w-full relative">
         <Header
