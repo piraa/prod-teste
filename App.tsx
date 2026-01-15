@@ -36,6 +36,7 @@ function App() {
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
   const [userName, setUserName] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   // Fetch user profile from Supabase
   useEffect(() => {
@@ -123,6 +124,9 @@ function App() {
   const handleQuickAddTask = async (title: string) => {
     if (!user) return;
 
+    // Format selected date as YYYY-MM-DD for Supabase
+    const dueDateStr = selectedDate.toISOString().split('T')[0];
+
     const { data, error } = await supabase
       .from('tasks')
       .insert([
@@ -130,8 +134,8 @@ function App() {
           user_id: user.id,
           title,
           description: null,
-          priority: 'medium',
-          due_date: null,
+          priority: 'low',
+          due_date: dueDateStr,
           completed: false,
         },
       ])
@@ -144,6 +148,14 @@ function App() {
       setTasks((prev) => [...prev, data]);
     }
   };
+
+  // Filter tasks by selected date
+  const filteredTasks = tasks.filter((task) => {
+    if (!task.due_date) return false;
+    const taskDate = new Date(task.due_date).toISOString().split('T')[0];
+    const selected = selectedDate.toISOString().split('T')[0];
+    return taskDate === selected;
+  });
 
   // Initialize theme based on preference or system
   useEffect(() => {
@@ -220,7 +232,12 @@ function App() {
                     <p className="text-muted-foreground">Carregando tarefas...</p>
                   </div>
                 ) : (
-                  <TaskList tasks={tasks} onQuickAdd={handleQuickAddTask} />
+                  <TaskList
+                    tasks={filteredTasks}
+                    selectedDate={selectedDate}
+                    onDateChange={setSelectedDate}
+                    onQuickAdd={handleQuickAddTask}
+                  />
                 )}
                 <HabitTracker habits={MOCK_HABITS} />
               </div>

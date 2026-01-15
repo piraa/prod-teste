@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { ListTodo } from 'lucide-react';
+import { ListTodo, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Task } from '../types';
 
 interface TaskListProps {
   tasks: Task[];
+  selectedDate: Date;
+  onDateChange: (date: Date) => void;
   onQuickAdd?: (title: string) => Promise<void>;
 }
 
-export const TaskList: React.FC<TaskListProps> = ({ tasks, onQuickAdd }) => {
+export const TaskList: React.FC<TaskListProps> = ({ tasks, selectedDate, onDateChange, onQuickAdd }) => {
   const [quickTaskTitle, setQuickTaskTitle] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
@@ -19,6 +21,44 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onQuickAdd }) => {
       setIsAdding(false);
     }
   };
+
+  const goToPreviousDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() - 1);
+    onDateChange(newDate);
+  };
+
+  const goToNextDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + 1);
+    onDateChange(newDate);
+  };
+
+  const formatDate = (date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const compareDate = new Date(date);
+    compareDate.setHours(0, 0, 0, 0);
+
+    if (compareDate.getTime() === today.getTime()) {
+      return 'Hoje';
+    }
+
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (compareDate.getTime() === yesterday.getTime()) {
+      return 'Ontem';
+    }
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    if (compareDate.getTime() === tomorrow.getTime()) {
+      return 'Amanhã';
+    }
+
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  };
+
   return (
     <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm overflow-hidden flex flex-col h-fit">
       <div className="p-6 border-b border-border flex items-center justify-between">
@@ -26,9 +66,23 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onQuickAdd }) => {
           <ListTodo className="text-primary" size={20} />
           Foco Diário
         </h3>
-        <button className="text-xs font-bold text-muted-foreground hover:text-primary transition-colors">
-          VER TUDO
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={goToPreviousDay}
+            className="p-1 text-muted-foreground hover:text-primary transition-colors"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <span className="text-sm font-medium text-foreground min-w-[70px] text-center">
+            {formatDate(selectedDate)}
+          </span>
+          <button
+            onClick={goToNextDay}
+            className="p-1 text-muted-foreground hover:text-primary transition-colors"
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
       </div>
       
       <div className="p-6 space-y-5">
@@ -43,9 +97,6 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onQuickAdd }) => {
             medium: 'Média',
             high: 'Alta',
           };
-          const dueTime = task.due_date
-            ? new Date(task.due_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
-            : '';
 
           return (
             <div key={task.id} className="flex items-start gap-4 group">
@@ -60,9 +111,11 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onQuickAdd }) => {
                 <p className={`text-sm font-semibold truncate ${task.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
                   {task.title}
                 </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {task.description || 'Sem descrição'} {dueTime && `• ${dueTime}`}
-                </p>
+                {task.description && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {task.description}
+                  </p>
+                )}
               </div>
               <span className={`px-2 py-1 text-[10px] font-bold rounded uppercase tracking-wide ${priorityColors[task.priority]}`}>
                 {priorityLabels[task.priority]}
