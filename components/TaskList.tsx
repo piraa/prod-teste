@@ -8,6 +8,7 @@ interface TaskListProps {
   onDateChange: (date: Date) => void;
   onQuickAdd?: (title: string) => Promise<void>;
   onToggleComplete?: (taskId: string, completed: boolean) => Promise<void>;
+  onEditTask?: (task: Task) => void;
 }
 
 export const TaskList: React.FC<TaskListProps> = ({
@@ -15,7 +16,8 @@ export const TaskList: React.FC<TaskListProps> = ({
   selectedDate,
   onDateChange,
   onQuickAdd,
-  onToggleComplete
+  onToggleComplete,
+  onEditTask
 }) => {
   const [quickTaskTitle, setQuickTaskTitle] = useState('');
   const [isAdding, setIsAdding] = useState(false);
@@ -96,7 +98,10 @@ export const TaskList: React.FC<TaskListProps> = ({
     <div className="flex items-start gap-4 group">
       <div className="pt-0.5">
         <button
-          onClick={() => handleToggleComplete(task.id, task.completed)}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleToggleComplete(task.id, task.completed);
+          }}
           className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer
             ${isCompleted
               ? 'bg-primary border-primary text-primary-foreground'
@@ -106,7 +111,10 @@ export const TaskList: React.FC<TaskListProps> = ({
           {isCompleted && <Check size={12} strokeWidth={3} />}
         </button>
       </div>
-      <div className="flex-1 min-w-0">
+      <div
+        className="flex-1 min-w-0 cursor-pointer"
+        onClick={() => onEditTask?.(task)}
+      >
         <p className={`text-sm font-semibold truncate ${isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
           {task.title}
         </p>

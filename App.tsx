@@ -6,7 +6,7 @@ import { TaskList } from './components/TaskList';
 import { HabitTracker } from './components/HabitTracker';
 import { CalendarWidget } from './components/CalendarWidget';
 import { GoalsWidget } from './components/GoalsWidget';
-import { NewTaskModal } from './components/NewTaskModal';
+import { TaskModal } from './components/TaskModal';
 import { AuthPage } from './components/AuthPage';
 import { StyleguidePage } from './styleguide';
 import { CheckCircle2, Flame, TrendingUp, Timer, Loader2 } from 'lucide-react';
@@ -35,7 +35,8 @@ function App() {
   const [isDark, setIsDark] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(true);
-  const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [userName, setUserName] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
@@ -156,6 +157,78 @@ function App() {
     }
   };
 
+  // Update existing task in Supabase
+  const handleUpdateTask = async (taskData: {
+    title: string;
+    description: string;
+    priority: 'low' | 'medium' | 'high';
+    due_date: string | null;
+    estimated_minutes: number | null;
+    start_time: string | null;
+    end_time: string | null;
+  }) => {
+    if (!user || !editingTask) return;
+
+    const { data, error } = await supabase
+      .from('tasks')
+      .update({
+        title: taskData.title,
+        description: taskData.description || null,
+        priority: taskData.priority,
+        due_date: taskData.due_date,
+        estimated_minutes: taskData.estimated_minutes,
+        start_time: taskData.start_time,
+        end_time: taskData.end_time,
+      })
+      .eq('id', editingTask.id)
+      .eq('user_id', user.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Erro ao atualizar tarefa:', error);
+    } else if (data) {
+      setTasks((prev) =>
+        prev.map((task) => (task.id === editingTask.id ? data : task))
+      );
+    }
+  };
+
+  // Delete task from Supabase
+  const handleDeleteTask = async (taskId: string) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', taskId)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Erro ao excluir tarefa:', error);
+    } else {
+      setTasks((prev) => prev.filter((task) => task.id !== taskId));
+    }
+  };
+
+  // Open modal to edit a task
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setIsTaskModalOpen(true);
+  };
+
+  // Open modal to create a new task
+  const handleNewTask = () => {
+    setEditingTask(null);
+    setIsTaskModalOpen(true);
+  };
+
+  // Close modal
+  const handleCloseModal = () => {
+    setIsTaskModalOpen(false);
+    setEditingTask(null);
+  };
+
   // Toggle task completion status
   const handleToggleComplete = async (taskId: string, completed: boolean) => {
     if (!user) return;
@@ -257,7 +330,7 @@ function App() {
           toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           toggleTheme={() => setIsDark(!isDark)}
           isDark={isDark}
-          onNewTask={() => setIsNewTaskModalOpen(true)}
+          onNewTask={handleNewTask}
         />
 
         <main className="flex-1 overflow-y-auto custom-scrollbar p-4 lg:p-8">
@@ -290,6 +363,7 @@ function App() {
                     onDateChange={setSelectedDate}
                     onQuickAdd={handleQuickAddTask}
                     onToggleComplete={handleToggleComplete}
+                    onEditTask={handleEditTask}
                   />
                 )}
                 <HabitTracker habits={MOCK_HABITS} />
@@ -301,6 +375,7 @@ function App() {
                   tasks={tasks}
                   selectedDate={selectedDate}
                   onDateChange={setSelectedDate}
+                  onEditTask={handleEditTask}
                 />
                 <GoalsWidget goals={MOCK_GOALS} />
               </div>
@@ -310,10 +385,12 @@ function App() {
         </main>
       </div>
 
-      <NewTaskModal
-        isOpen={isNewTaskModalOpen}
-        onClose={() => setIsNewTaskModalOpen(false)}
-        onSave={handleAddTask}
+      <TaskModal
+        isOpen={isTaskModalOpen}
+        onClose={handleCloseModal}
+        onSave={editingTask ? handleUpdateTask : handleAddTask}
+        onDelete={handleDeleteTask}
+        task={editingTask}
       />
     </div>
   );

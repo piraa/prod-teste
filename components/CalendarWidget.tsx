@@ -6,12 +6,14 @@ interface CalendarWidgetProps {
   tasks: Task[];
   selectedDate: Date;
   onDateChange: (date: Date) => void;
+  onEditTask?: (task: Task) => void;
 }
 
 export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
   tasks,
   selectedDate,
-  onDateChange
+  onDateChange,
+  onEditTask
 }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -207,6 +209,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
           selectedDateTasks.slice(0, 3).map((task) => (
             <div
               key={task.id}
+              onClick={() => onEditTask?.(task)}
               className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer group"
             >
               <div className={`w-1.5 ${task.start_time ? 'h-10' : 'h-8'} ${getPriorityColor(task.priority)} rounded-full shadow-sm ${task.completed ? 'opacity-50' : ''}`}></div>
