@@ -104,6 +104,15 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       ? calculatedEstimate
       : estimatedMinutes;
 
+    console.log('TaskModal handleSubmit:', {
+      hasDefinedTimes,
+      calculatedEstimate,
+      estimatedMinutes,
+      finalEstimate,
+      startTime,
+      endTime,
+    });
+
     setSaving(true);
     await onSave({
       title: title.trim(),

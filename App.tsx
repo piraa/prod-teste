@@ -159,6 +159,8 @@ function App() {
   }) => {
     if (!user) return;
 
+    console.log('handleAddTask received:', taskData);
+
     const { data, error } = await supabase
       .from('tasks')
       .insert([
@@ -224,6 +226,8 @@ function App() {
     end_time: string | null;
   }) => {
     if (!user || !editingTask) return;
+
+    console.log('handleUpdateTask received:', taskData);
 
     const { data, error } = await supabase
       .from('tasks')
