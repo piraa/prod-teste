@@ -248,6 +248,25 @@ code, pre, .font-mono {
   animation: fade-in-up 0.3s ease-out;
 }
 
+@keyframes typing-dot {
+  0%, 20% {
+    opacity: 0;
+  }
+  40%, 100% {
+    opacity: 1;
+  }
+}
+
+.typing-dot-1 {
+  animation: typing-dot 1.4s ease-in-out infinite;
+}
+.typing-dot-2 {
+  animation: typing-dot 1.4s ease-in-out 0.2s infinite;
+}
+.typing-dot-3 {
+  animation: typing-dot 1.4s ease-in-out 0.4s infinite;
+}
+
 /* === CUSTOM SCROLLBAR === */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;

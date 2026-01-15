@@ -16,11 +16,12 @@ const TypingIndicator: React.FC = () => (
     <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-muted">
       <Sparkles className="w-4 h-4 text-primary" />
     </div>
-    <div className="px-4 py-3 rounded-2xl rounded-bl-md bg-muted">
-      <div className="flex items-center gap-1">
-        <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce [animation-delay:-0.3s]" />
-        <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce [animation-delay:-0.15s]" />
-        <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" />
+    <div className="px-4 py-2 rounded-2xl rounded-bl-md bg-muted">
+      <div className="flex items-center text-sm text-muted-foreground">
+        <span>Pensando</span>
+        <span className="typing-dot-1">.</span>
+        <span className="typing-dot-2">.</span>
+        <span className="typing-dot-3">.</span>
       </div>
     </div>
   </div>
