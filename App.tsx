@@ -317,6 +317,31 @@ function App() {
     }
   };
 
+  // Update task time (for time blocking drag & drop)
+  const handleUpdateTaskTime = async (taskId: string, date: string, startTime: string, endTime: string) => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('tasks')
+      .update({
+        due_date: date,
+        start_time: startTime,
+        end_time: endTime,
+      })
+      .eq('id', taskId)
+      .eq('user_id', user.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Erro ao atualizar horário da tarefa:', error);
+    } else if (data) {
+      setTasks((prev) =>
+        prev.map((task) => (task.id === taskId ? data : task))
+      );
+    }
+  };
+
   // Toggle habit completion for a specific date
   const handleToggleHabit = async (habitId: string, date: string, completed: boolean) => {
     if (!user) return;
@@ -642,6 +667,7 @@ function App() {
               onAddTask={handleNewTask}
               onEditTask={handleEditTask}
               onToggleComplete={handleToggleComplete}
+              onUpdateTaskTime={handleUpdateTaskTime}
             />
           )}
 

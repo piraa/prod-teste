@@ -1,23 +1,26 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Search, Filter, Calendar, Inbox, CheckCircle2, Clock, ChevronDown, Check, List, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Filter, Calendar, Inbox, CheckCircle2, Clock, ChevronDown, Check, List, ChevronLeft, ChevronRight, LayoutGrid } from 'lucide-react';
 import { Task } from '../types';
 import { fireConfetti } from '../utils/confetti';
+import { TimeBlockingView } from './TimeBlockingView';
 
 interface TasksPageProps {
   tasks: Task[];
   onAddTask: () => void;
   onEditTask: (task: Task) => void;
   onToggleComplete: (taskId: string, completed: boolean) => Promise<void>;
+  onUpdateTaskTime?: (taskId: string, date: string, startTime: string, endTime: string) => Promise<void>;
 }
 
 type FilterType = 'all' | 'inbox' | 'today' | 'upcoming' | 'completed';
-type ViewType = 'list' | 'calendar';
+type ViewType = 'list' | 'calendar' | 'timeblock';
 
 export const TasksPage: React.FC<TasksPageProps> = ({
   tasks,
   onAddTask,
   onEditTask,
-  onToggleComplete
+  onToggleComplete,
+  onUpdateTaskTime
 }) => {
   const [view, setView] = useState<ViewType>('list');
   const [filter, setFilter] = useState<FilterType>('all');
@@ -369,6 +372,17 @@ export const TasksPage: React.FC<TasksPageProps> = ({
             <Calendar size={16} />
             Calendário
           </button>
+          <button
+            onClick={() => setView('timeblock')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              view === 'timeblock'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <LayoutGrid size={16} />
+            Time Block
+          </button>
         </div>
       </div>
 
@@ -468,7 +482,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({
             )}
           </div>
         </>
-      ) : (
+      ) : view === 'calendar' ? (
         /* Calendar View */
         <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
           {/* Calendar Header */}
@@ -560,6 +574,13 @@ export const TasksPage: React.FC<TasksPageProps> = ({
             </div>
           </div>
         </div>
+      ) : (
+        /* Time Blocking View */
+        <TimeBlockingView
+          tasks={tasks}
+          onEditTask={onEditTask}
+          onUpdateTaskTime={onUpdateTaskTime || (async () => {})}
+        />
       )}
     </div>
   );
