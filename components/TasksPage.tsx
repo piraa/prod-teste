@@ -1,8 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { Plus, Search, Filter, Calendar, Inbox, CheckCircle2, Clock, ChevronDown, Check, List, ChevronLeft, ChevronRight, LayoutGrid } from 'lucide-react';
+import React, { useState, useMemo, useRef } from 'react';
+import { Plus, Calendar, ChevronLeft, ChevronRight, Check, GripVertical, Clock, Filter } from 'lucide-react';
 import { Task } from '../types';
 import { fireConfetti } from '../utils/confetti';
-import { TimeBlockingView } from './TimeBlockingView';
 
 interface TasksPageProps {
   tasks: Task[];
@@ -10,578 +9,491 @@ interface TasksPageProps {
   onEditTask: (task: Task) => void;
   onToggleComplete: (taskId: string, completed: boolean) => Promise<void>;
   onUpdateTaskTime?: (taskId: string, date: string, startTime: string, endTime: string) => Promise<void>;
+  onQuickAddTask?: (title: string, dueDate: string) => Promise<void>;
 }
 
-type FilterType = 'all' | 'inbox' | 'today' | 'upcoming' | 'completed';
-type ViewType = 'list' | 'calendar' | 'timeblock';
+// Generate time slots from 6:00 to 23:00
+const generateTimeSlots = () => {
+  const slots: string[] = [];
+  for (let hour = 6; hour <= 23; hour++) {
+    slots.push(`${hour.toString().padStart(2, '0')}:00`);
+  }
+  return slots;
+};
+
+const TIME_SLOTS = generateTimeSlots();
+const SLOT_HEIGHT = 60; // pixels per hour
 
 export const TasksPage: React.FC<TasksPageProps> = ({
   tasks,
   onAddTask,
   onEditTask,
   onToggleComplete,
-  onUpdateTaskTime
+  onUpdateTaskTime,
+  onQuickAddTask
 }) => {
-  const [view, setView] = useState<ViewType>('list');
-  const [filter, setFilter] = useState<FilterType>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    overdue: true,
-    today: true,
-    upcoming: true,
-    noDate: true,
-    completed: false
-  });
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  // Filter and categorize tasks
-  const filteredTasks = tasks.filter(task => {
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      if (!task.title.toLowerCase().includes(query) &&
-          !task.description?.toLowerCase().includes(query)) {
-        return false;
-      }
-    }
-
-    // Type filter
-    switch (filter) {
-      case 'inbox':
-        return !task.due_date && !task.completed;
-      case 'today':
-        if (!task.due_date) return false;
-        const taskDate = new Date(task.due_date);
-        taskDate.setHours(0, 0, 0, 0);
-        return taskDate.getTime() === today.getTime() && !task.completed;
-      case 'upcoming':
-        if (!task.due_date) return false;
-        const upcomingDate = new Date(task.due_date);
-        upcomingDate.setHours(0, 0, 0, 0);
-        return upcomingDate.getTime() > today.getTime() && !task.completed;
-      case 'completed':
-        return task.completed;
-      default:
-        return true;
-    }
+  const [startDate, setStartDate] = useState(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
   });
 
-  // Categorize tasks for "all" view
-  const categorizedTasks = {
-    overdue: filteredTasks.filter(task => {
-      if (!task.due_date || task.completed) return false;
-      const taskDate = new Date(task.due_date);
-      taskDate.setHours(0, 0, 0, 0);
-      return taskDate.getTime() < today.getTime();
-    }),
-    today: filteredTasks.filter(task => {
-      if (!task.due_date || task.completed) return false;
-      const taskDate = new Date(task.due_date);
-      taskDate.setHours(0, 0, 0, 0);
-      return taskDate.getTime() === today.getTime();
-    }),
-    upcoming: filteredTasks.filter(task => {
-      if (!task.due_date || task.completed) return false;
-      const taskDate = new Date(task.due_date);
-      taskDate.setHours(0, 0, 0, 0);
-      return taskDate.getTime() > today.getTime();
-    }),
-    noDate: filteredTasks.filter(task => !task.due_date && !task.completed),
-    completed: filteredTasks.filter(task => task.completed)
-  };
+  // Drag state
+  const [draggingTask, setDraggingTask] = useState<Task | null>(null);
+  const [dragOverSlot, setDragOverSlot] = useState<{ date: string; time: string } | null>(null);
 
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
-  };
+  // Quick add state per column
+  const [quickAddColumn, setQuickAddColumn] = useState<string | null>(null);
+  const [quickAddTitle, setQuickAddTitle] = useState('');
 
-  const priorityColors = {
-    low: 'bg-slate-500/15 text-slate-700 dark:text-slate-400',
-    medium: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
-    high: 'bg-red-500/15 text-red-700 dark:text-red-400',
-  };
-
-  const priorityLabels = {
-    low: 'Baixa',
-    medium: 'Média',
-    high: 'Alta',
-  };
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-  };
-
-  // Calendar helpers
-  const monthNames = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-  ];
-  const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-
-  const calendarDays = useMemo(() => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const startDayOfWeek = firstDay.getDay();
-
-    const days: { date: Date; isCurrentMonth: boolean }[] = [];
-
-    // Add days from previous month
-    const prevMonthLastDay = new Date(year, month, 0).getDate();
-    for (let i = startDayOfWeek - 1; i >= 0; i--) {
-      days.push({
-        date: new Date(year, month - 1, prevMonthLastDay - i),
-        isCurrentMonth: false
-      });
+  // Generate 5 days starting from startDate
+  const days = useMemo(() => {
+    const result: Date[] = [];
+    for (let i = 0; i < 5; i++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
+      result.push(date);
     }
+    return result;
+  }, [startDate]);
 
-    // Add days from current month
-    for (let i = 1; i <= lastDay.getDate(); i++) {
-      days.push({
-        date: new Date(year, month, i),
-        isCurrentMonth: true
-      });
-    }
+  const today = useMemo(() => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return t;
+  }, []);
 
-    // Add days from next month to complete the grid
-    const remainingDays = 42 - days.length;
-    for (let i = 1; i <= remainingDays; i++) {
-      days.push({
-        date: new Date(year, month + 1, i),
-        isCurrentMonth: false
-      });
-    }
+  const weekDayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+  const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
-    return days;
-  }, [currentMonth]);
+  const formatDayHeader = (date: Date) => {
+    const isToday = date.getTime() === today.getTime();
+    const dayName = weekDayNames[date.getDay()];
+    const monthName = monthNames[date.getMonth()];
+    const dayNum = date.getDate();
 
-  const getTasksForDate = (date: Date): Task[] => {
+    return { dayName, monthName, dayNum, isToday };
+  };
+
+  const goToPrevious = () => {
+    const newDate = new Date(startDate);
+    newDate.setDate(startDate.getDate() - 5);
+    setStartDate(newDate);
+  };
+
+  const goToNext = () => {
+    const newDate = new Date(startDate);
+    newDate.setDate(startDate.getDate() + 5);
+    setStartDate(newDate);
+  };
+
+  const goToToday = () => {
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    setStartDate(todayDate);
+  };
+
+  // Get tasks for a specific day
+  const getTasksForDay = (date: Date): Task[] => {
     const dateStr = date.toISOString().split('T')[0];
     return tasks.filter(task => {
       if (!task.due_date) return false;
+      const taskDateStr = task.due_date.split('T')[0];
+      return taskDateStr === dateStr && !task.completed;
+    });
+  };
+
+  // Get completed tasks for a specific day
+  const getCompletedTasksForDay = (date: Date): Task[] => {
+    const dateStr = date.toISOString().split('T')[0];
+    return tasks.filter(task => {
+      if (!task.due_date) return false;
+      const taskDateStr = task.due_date.split('T')[0];
+      return taskDateStr === dateStr && task.completed;
+    });
+  };
+
+  // Get tasks with scheduled time for time blocking sidebar
+  const getScheduledTasks = (date: Date): Task[] => {
+    const dateStr = date.toISOString().split('T')[0];
+    return tasks.filter(task => {
+      if (!task.due_date || !task.start_time) return false;
       const taskDateStr = task.due_date.split('T')[0];
       return taskDateStr === dateStr;
     });
   };
 
-  const isToday = (date: Date): boolean => {
-    return date.toDateString() === today.toDateString();
+  // Calculate task position and height for time blocking
+  const getTaskStyle = (task: Task): React.CSSProperties => {
+    if (!task.start_time) return {};
+
+    const [startHour, startMin] = task.start_time.split(':').map(Number);
+    const topPosition = (startHour - 6) * SLOT_HEIGHT + (startMin / 60) * SLOT_HEIGHT;
+
+    let durationMinutes = 60; // Default 1 hour
+    if (task.end_time) {
+      const [endHour, endMin] = task.end_time.split(':').map(Number);
+      durationMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+    } else if (task.estimated_minutes) {
+      durationMinutes = task.estimated_minutes;
+    }
+
+    const height = (durationMinutes / 60) * SLOT_HEIGHT;
+
+    return {
+      top: `${topPosition}px`,
+      height: `${Math.max(height, 30)}px`,
+    };
   };
 
-  const goToPrevMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
-  };
-
-  const goToNextMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
-  };
-
-  const getPriorityColor = (priority: Task['priority']): string => {
+  const getPriorityBorderColor = (priority: Task['priority']): string => {
     switch (priority) {
-      case 'high': return 'bg-red-500';
-      case 'medium': return 'bg-amber-500';
-      case 'low': return 'bg-slate-400';
-      default: return 'bg-muted-foreground';
+      case 'high': return 'border-l-red-500';
+      case 'medium': return 'border-l-amber-500';
+      case 'low': return 'border-l-slate-400';
+      default: return 'border-l-primary';
     }
   };
 
-  const TaskItem = ({ task }: { task: Task }) => (
-    <div
-      className="flex items-start gap-4 p-4 bg-card border border-border rounded-lg hover:border-primary/30 transition-colors group"
-    >
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          const newValue = !task.completed;
-          if (newValue) {
-            fireConfetti(e);
-          }
-          onToggleComplete(task.id, newValue);
-        }}
-        className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0
-          ${task.completed
-            ? 'bg-primary border-primary text-primary-foreground'
-            : 'border-input hover:border-primary'
-          }`}
-      >
-        {task.completed && <Check size={12} strokeWidth={3} />}
-      </button>
+  const formatDuration = (minutes: number | null | undefined): string => {
+    if (!minutes) return '';
+    if (minutes < 60) return `${minutes}min`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours}h${mins}` : `${hours}h`;
+  };
 
-      <div
-        className="flex-1 min-w-0 cursor-pointer"
-        onClick={() => onEditTask(task)}
-      >
-        <p className={`font-semibold ${task.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-          {task.title}
-        </p>
-        {task.description && (
-          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-            {task.description}
+  // Drag handlers
+  const handleDragStart = (e: React.DragEvent, task: Task) => {
+    setDraggingTask(task);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', task.id);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingTask(null);
+    setDragOverSlot(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, date: Date, time: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const dateStr = date.toISOString().split('T')[0];
+    setDragOverSlot({ date: dateStr, time });
+  };
+
+  const handleDrop = async (e: React.DragEvent, date: Date, time: string) => {
+    e.preventDefault();
+
+    if (!draggingTask || !onUpdateTaskTime) return;
+
+    const dateStr = date.toISOString().split('T')[0];
+    const [hour, min] = time.split(':').map(Number);
+
+    // Calculate end time based on estimated duration or default 1 hour
+    let endHour = hour + 1;
+    let endMin = min;
+
+    if (draggingTask.estimated_minutes) {
+      const totalEndMinutes = hour * 60 + min + draggingTask.estimated_minutes;
+      endHour = Math.floor(totalEndMinutes / 60);
+      endMin = totalEndMinutes % 60;
+    }
+
+    const endTime = `${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}`;
+
+    await onUpdateTaskTime(draggingTask.id, dateStr, time, endTime);
+
+    setDraggingTask(null);
+    setDragOverSlot(null);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverSlot(null);
+  };
+
+  // Quick add handler
+  const handleQuickAdd = async (dateStr: string) => {
+    if (!quickAddTitle.trim()) {
+      setQuickAddColumn(null);
+      return;
+    }
+
+    if (onQuickAddTask) {
+      await onQuickAddTask(quickAddTitle.trim(), dateStr);
+    }
+
+    setQuickAddTitle('');
+    setQuickAddColumn(null);
+  };
+
+  // Task Card Component
+  const TaskCard = ({ task, showTime = false }: { task: Task; showTime?: boolean }) => (
+    <div
+      draggable
+      onDragStart={(e) => handleDragStart(e, task)}
+      onDragEnd={handleDragEnd}
+      onClick={() => onEditTask(task)}
+      className={`
+        bg-card border rounded-lg p-3 cursor-pointer
+        border-l-4 ${getPriorityBorderColor(task.priority)}
+        hover:shadow-md transition-all group
+        ${draggingTask?.id === task.id ? 'opacity-50' : ''}
+        ${task.completed ? 'opacity-60' : ''}
+      `}
+    >
+      <div className="flex items-start gap-2">
+        <GripVertical size={14} className="text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 cursor-grab" />
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            const newValue = !task.completed;
+            if (newValue) {
+              fireConfetti(e);
+            }
+            onToggleComplete(task.id, newValue);
+          }}
+          className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0
+            ${task.completed
+              ? 'bg-primary border-primary text-primary-foreground'
+              : 'border-muted-foreground/40 hover:border-primary'
+            }`}
+        >
+          {task.completed && <Check size={10} strokeWidth={3} />}
+        </button>
+
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-medium leading-tight ${task.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+            {task.title}
           </p>
-        )}
-        <div className="flex items-center gap-3 mt-2 flex-wrap">
-          {task.due_date && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Calendar size={12} />
-              {formatDate(task.due_date)}
-            </span>
-          )}
-          {task.start_time && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Clock size={12} />
-              {task.start_time.substring(0, 5)}
-              {task.end_time && ` - ${task.end_time.substring(0, 5)}`}
-            </span>
-          )}
-          {task.estimated_minutes && (
-            <span className="text-xs text-muted-foreground">
-              ~{task.estimated_minutes < 60
-                ? `${task.estimated_minutes}min`
-                : `${Math.floor(task.estimated_minutes / 60)}h${task.estimated_minutes % 60 > 0 ? task.estimated_minutes % 60 : ''}`}
-            </span>
-          )}
+
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            {showTime && task.start_time && (
+              <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                {task.start_time.substring(0, 5)}
+                {task.end_time && ` - ${task.end_time.substring(0, 5)}`}
+              </span>
+            )}
+            {task.estimated_minutes && (
+              <span className="text-xs text-muted-foreground">
+                {formatDuration(task.estimated_minutes)}
+              </span>
+            )}
+          </div>
         </div>
       </div>
-
-      <span className={`px-2 py-1 text-[10px] font-bold rounded uppercase tracking-wide flex-shrink-0 ${priorityColors[task.priority]}`}>
-        {priorityLabels[task.priority]}
-      </span>
     </div>
   );
 
-  const TaskSection = ({
-    title,
-    tasks,
-    sectionKey,
-    icon: Icon,
-    iconColor = 'text-muted-foreground',
-    emptyMessage
-  }: {
-    title: string;
-    tasks: Task[];
-    sectionKey: string;
-    icon: React.ElementType;
-    iconColor?: string;
-    emptyMessage?: string;
-  }) => {
-    if (tasks.length === 0 && !emptyMessage) return null;
-
-    return (
-      <div className="mb-6">
-        <button
-          onClick={() => toggleSection(sectionKey)}
-          className="flex items-center gap-2 w-full text-left mb-3 group"
-        >
-          <ChevronDown
-            size={16}
-            className={`transition-transform text-muted-foreground ${expandedSections[sectionKey] ? '' : '-rotate-90'}`}
-          />
-          <Icon size={18} className={iconColor} />
-          <span className="font-semibold text-foreground">{title}</span>
-          <span className="text-sm text-muted-foreground">({tasks.length})</span>
-        </button>
-
-        {expandedSections[sectionKey] && (
-          <div className="space-y-2 ml-6">
-            {tasks.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4">{emptyMessage}</p>
-            ) : (
-              tasks.map(task => <TaskItem key={task.id} task={task} />)
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const filterButtons: { key: FilterType; label: string; icon: React.ElementType }[] = [
-    { key: 'all', label: 'Todas', icon: Filter },
-    { key: 'inbox', label: 'Caixa de Entrada', icon: Inbox },
-    { key: 'today', label: 'Hoje', icon: Calendar },
-    { key: 'upcoming', label: 'Próximas', icon: Clock },
-    { key: 'completed', label: 'Concluídas', icon: CheckCircle2 },
-  ];
-
-  // Count for badges
-  const counts = {
-    all: tasks.length,
-    inbox: tasks.filter(t => !t.due_date && !t.completed).length,
-    today: tasks.filter(t => {
-      if (!t.due_date || t.completed) return false;
-      const d = new Date(t.due_date);
-      d.setHours(0, 0, 0, 0);
-      return d.getTime() === today.getTime();
-    }).length,
-    upcoming: tasks.filter(t => {
-      if (!t.due_date || t.completed) return false;
-      const d = new Date(t.due_date);
-      d.setHours(0, 0, 0, 0);
-      return d.getTime() > today.getTime();
-    }).length,
-    completed: tasks.filter(t => t.completed).length,
-  };
+  // Currently viewing today
+  const todayDateStr = today.toISOString().split('T')[0];
+  const todayScheduledTasks = getScheduledTasks(today);
 
   return (
-    <div className="p-6 lg:p-8 max-w-5xl mx-auto">
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Minhas Tarefas</h1>
-          <p className="text-muted-foreground mt-1">
-            {tasks.filter(t => !t.completed).length} tarefas pendentes
-          </p>
+      <div className="flex-shrink-0 p-4 border-b border-border bg-background flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={goToToday}
+            className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-sm font-medium hover:bg-primary/20 transition-colors"
+          >
+            <Calendar size={16} />
+            Hoje
+          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={goToPrevious}
+              className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <button
+              onClick={goToNext}
+              className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
         </div>
+
         <button
           onClick={onAddTask}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:brightness-105 transition-all shadow-sm"
         >
-          <Plus size={20} />
+          <Plus size={18} />
           Nova Tarefa
         </button>
       </div>
 
-      {/* View Toggle */}
-      <div className="flex items-center justify-center mb-6">
-        <div className="inline-flex bg-muted rounded-lg p-1">
-          <button
-            onClick={() => setView('list')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-              view === 'list'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <List size={16} />
-            Lista
-          </button>
-          <button
-            onClick={() => setView('calendar')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-              view === 'calendar'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Calendar size={16} />
-            Calendário
-          </button>
-          <button
-            onClick={() => setView('timeblock')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-              view === 'timeblock'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <LayoutGrid size={16} />
-            Time Block
-          </button>
-        </div>
-      </div>
+      {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Day Columns */}
+        <div className="flex-1 flex overflow-x-auto">
+          {days.map((date, index) => {
+            const { dayName, monthName, dayNum, isToday } = formatDayHeader(date);
+            const dateStr = date.toISOString().split('T')[0];
+            const dayTasks = getTasksForDay(date);
+            const completedTasks = getCompletedTasksForDay(date);
+            const isQuickAddOpen = quickAddColumn === dateStr;
 
-      {view === 'list' ? (
-        <>
-          {/* Search and Filters */}
-          <div className="mb-6 space-y-4">
-            {/* Search */}
-            <div className="relative">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar tarefas..."
-                className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
+            // Calculate total estimated time
+            const totalMinutes = dayTasks.reduce((sum, t) => sum + (t.estimated_minutes || 0), 0);
 
-            {/* Filter Pills */}
-            <div className="flex flex-wrap gap-2">
-              {filterButtons.map(({ key, label, icon: Icon }) => (
-                <button
-                  key={key}
-                  onClick={() => setFilter(key)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                    filter === key
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground hover:bg-accent'
-                  }`}
-                >
-                  <Icon size={14} />
-                  {label}
-                  {counts[key] > 0 && (
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                      filter === key ? 'bg-primary-foreground/20' : 'bg-background'
-                    }`}>
-                      {counts[key]}
-                    </span>
+            return (
+              <div
+                key={dateStr}
+                className={`flex-1 min-w-[200px] max-w-[280px] border-r border-border flex flex-col ${
+                  isToday ? 'bg-primary/5' : 'bg-background'
+                }`}
+              >
+                {/* Day Header */}
+                <div className="p-4 border-b border-border">
+                  <p className={`text-sm font-medium ${isToday ? 'text-primary' : 'text-muted-foreground'}`}>
+                    {dayName}
+                  </p>
+                  <p className={`text-2xl font-bold ${isToday ? 'text-primary' : 'text-foreground'}`}>
+                    {monthName} {dayNum}
+                  </p>
+                  {totalMinutes > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatDuration(totalMinutes)} planejado
+                    </p>
                   )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Task List */}
-          <div className="bg-background">
-            {filter === 'all' ? (
-              <>
-                <TaskSection
-                  title="Atrasadas"
-                  tasks={categorizedTasks.overdue}
-                  sectionKey="overdue"
-                  icon={Clock}
-                  iconColor="text-destructive"
-                />
-                <TaskSection
-                  title="Hoje"
-                  tasks={categorizedTasks.today}
-                  sectionKey="today"
-                  icon={Calendar}
-                  iconColor="text-primary"
-                  emptyMessage="Nenhuma tarefa para hoje"
-                />
-                <TaskSection
-                  title="Próximas"
-                  tasks={categorizedTasks.upcoming}
-                  sectionKey="upcoming"
-                  icon={Clock}
-                  iconColor="text-blue-500"
-                />
-                <TaskSection
-                  title="Caixa de Entrada"
-                  tasks={categorizedTasks.noDate}
-                  sectionKey="noDate"
-                  icon={Inbox}
-                  iconColor="text-amber-500"
-                />
-                <TaskSection
-                  title="Concluídas"
-                  tasks={categorizedTasks.completed}
-                  sectionKey="completed"
-                  icon={CheckCircle2}
-                  iconColor="text-green-500"
-                />
-              </>
-            ) : (
-              <div className="space-y-2">
-                {filteredTasks.length === 0 ? (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground">Nenhuma tarefa encontrada</p>
-                  </div>
-                ) : (
-                  filteredTasks.map(task => <TaskItem key={task.id} task={task} />)
-                )}
-              </div>
-            )}
-          </div>
-        </>
-      ) : view === 'calendar' ? (
-        /* Calendar View */
-        <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-          {/* Calendar Header */}
-          <div className="p-4 border-b border-border flex items-center justify-between">
-            <h3 className="font-bold text-lg">
-              {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-            </h3>
-            <div className="flex gap-2">
-              <button
-                onClick={goToPrevMonth}
-                className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <button
-                onClick={goToNextMonth}
-                className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ChevronRight size={20} />
-              </button>
-            </div>
-          </div>
-
-          {/* Calendar Grid */}
-          <div className="p-4">
-            {/* Week day headers */}
-            <div className="grid grid-cols-7 mb-2">
-              {weekDays.map((day) => (
-                <div key={day} className="text-center text-xs font-bold text-muted-foreground uppercase py-2">
-                  {day}
                 </div>
-              ))}
+
+                {/* Add Task Button / Quick Add */}
+                <div className="px-3 py-2 border-b border-border">
+                  {isQuickAddOpen ? (
+                    <input
+                      type="text"
+                      value={quickAddTitle}
+                      onChange={(e) => setQuickAddTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleQuickAdd(dateStr);
+                        if (e.key === 'Escape') {
+                          setQuickAddColumn(null);
+                          setQuickAddTitle('');
+                        }
+                      }}
+                      onBlur={() => handleQuickAdd(dateStr)}
+                      autoFocus
+                      placeholder="Nome da tarefa..."
+                      className="w-full px-3 py-2 text-sm bg-card border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  ) : (
+                    <button
+                      onClick={() => setQuickAddColumn(dateStr)}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
+                    >
+                      <Plus size={16} />
+                      Adicionar tarefa
+                    </button>
+                  )}
+                </div>
+
+                {/* Tasks */}
+                <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                  {dayTasks.map(task => (
+                    <TaskCard key={task.id} task={task} showTime />
+                  ))}
+
+                  {dayTasks.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-4">
+                      Nenhuma tarefa
+                    </p>
+                  )}
+
+                  {/* Completed tasks section */}
+                  {completedTasks.length > 0 && (
+                    <div className="pt-4 border-t border-border mt-4">
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Concluídas ({completedTasks.length})
+                      </p>
+                      <div className="space-y-2">
+                        {completedTasks.map(task => (
+                          <TaskCard key={task.id} task={task} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Time Blocking Sidebar (Desktop only) */}
+        <div className="hidden xl:flex w-80 border-l border-border flex-col bg-background">
+          {/* Sidebar Header */}
+          <div className="p-4 border-b border-border">
+            <div className="flex items-center gap-2">
+              <Clock size={18} className="text-primary" />
+              <span className="font-semibold">Calendário</span>
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Arraste tarefas para agendar
+            </p>
+          </div>
 
-            {/* Calendar days */}
-            <div className="grid grid-cols-7 gap-1">
-              {calendarDays.map((day, i) => {
-                const dayTasks = getTasksForDate(day.date);
-                const incompleteTasks = dayTasks.filter(t => !t.completed);
-                const completedTasks = dayTasks.filter(t => t.completed);
+          {/* Today mini header */}
+          <div className="px-4 py-2 border-b border-border bg-muted/30">
+            <p className="text-sm font-medium text-foreground">
+              Hoje, {today.getDate()} de {monthNames[today.getMonth()]}
+            </p>
+          </div>
 
+          {/* Time Grid */}
+          <div className="flex-1 overflow-y-auto relative">
+            {/* Time slots */}
+            <div className="relative">
+              {TIME_SLOTS.map((time) => {
+                const isDropTarget = dragOverSlot?.date === todayDateStr && dragOverSlot?.time === time;
                 return (
                   <div
-                    key={i}
-                    className={`
-                      min-h-[100px] p-2 rounded-lg border transition-colors
-                      ${day.isCurrentMonth ? 'bg-background border-border' : 'bg-muted/30 border-transparent'}
-                      ${isToday(day.date) ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}
-                    `}
+                    key={time}
+                    className={`flex border-b border-border/50 transition-colors ${
+                      isDropTarget ? 'bg-primary/20' : ''
+                    }`}
+                    style={{ height: `${SLOT_HEIGHT}px` }}
+                    onDragOver={(e) => handleDragOver(e, today, time)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, today, time)}
                   >
-                    <div className={`text-sm font-medium mb-1 ${
-                      !day.isCurrentMonth ? 'text-muted-foreground/50' :
-                      isToday(day.date) ? 'text-primary font-bold' : 'text-foreground'
-                    }`}>
-                      {day.date.getDate()}
+                    <div className="w-14 flex-shrink-0 text-right pr-2 pt-1">
+                      <span className="text-xs text-muted-foreground">{time}</span>
                     </div>
-
-                    {/* Tasks for this day */}
-                    <div className="space-y-1">
-                      {incompleteTasks.slice(0, 3).map((task) => (
-                        <div
-                          key={task.id}
-                          onClick={() => onEditTask(task)}
-                          className="flex items-center gap-1 p-1 rounded text-xs bg-accent/50 hover:bg-accent cursor-pointer truncate"
-                        >
-                          <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} />
-                          <span className="truncate">{task.title}</span>
-                        </div>
-                      ))}
-                      {completedTasks.slice(0, 1).map((task) => (
-                        <div
-                          key={task.id}
-                          onClick={() => onEditTask(task)}
-                          className="flex items-center gap-1 p-1 rounded text-xs bg-green-500/10 hover:bg-green-500/20 cursor-pointer truncate"
-                        >
-                          <Check size={10} className="text-green-500 flex-shrink-0" />
-                          <span className="truncate line-through text-muted-foreground">{task.title}</span>
-                        </div>
-                      ))}
-                      {dayTasks.length > 4 && (
-                        <div className="text-[10px] text-muted-foreground text-center">
-                          +{dayTasks.length - 4} mais
-                        </div>
-                      )}
-                    </div>
+                    <div className="flex-1 border-l border-border/50 hover:bg-accent/20 transition-colors" />
                   </div>
                 );
               })}
+
+              {/* Scheduled tasks overlay */}
+              <div className="absolute top-0 left-14 right-0 pointer-events-none">
+                {todayScheduledTasks.map(task => (
+                  <div
+                    key={task.id}
+                    onClick={() => onEditTask(task)}
+                    className={`
+                      absolute left-1 right-1 p-2 rounded-lg border cursor-pointer pointer-events-auto
+                      border-l-4 ${getPriorityBorderColor(task.priority)}
+                      bg-primary/20 hover:bg-primary/30 transition-colors
+                      overflow-hidden
+                    `}
+                    style={getTaskStyle(task)}
+                  >
+                    <p className="text-xs font-semibold truncate text-foreground">{task.title}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {task.start_time?.substring(0, 5)} - {task.end_time?.substring(0, 5)}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      ) : (
-        /* Time Blocking View */
-        <TimeBlockingView
-          tasks={tasks}
-          onEditTask={onEditTask}
-          onUpdateTaskTime={onUpdateTaskTime || (async () => {})}
-        />
-      )}
+      </div>
     </div>
   );
 };

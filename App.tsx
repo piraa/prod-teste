@@ -217,6 +217,32 @@ function App() {
     }
   };
 
+  // Quick add task with specific date (for TasksPage columns)
+  const handleQuickAddTaskWithDate = async (title: string, dueDate: string) => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert([
+        {
+          user_id: user.id,
+          title,
+          description: null,
+          priority: 'low',
+          due_date: dueDate,
+          completed: false,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Erro ao criar tarefa:', error);
+    } else if (data) {
+      setTasks((prev) => [...prev, data]);
+    }
+  };
+
   // Update existing task in Supabase
   const handleUpdateTask = async (taskData: {
     title: string;
@@ -668,6 +694,7 @@ function App() {
               onEditTask={handleEditTask}
               onToggleComplete={handleToggleComplete}
               onUpdateTaskTime={handleUpdateTaskTime}
+              onQuickAddTask={handleQuickAddTaskWithDate}
             />
           )}
 
