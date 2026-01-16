@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { History, Plus, Flame, Target } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { Habit, HabitLog } from '../types';
 import { HabitModal } from './HabitModal';
 
@@ -180,11 +181,31 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
     }
   };
 
-  const handleToggle = async (habitId: string, dayIndex: number) => {
+  const handleToggle = async (habitId: string, dayIndex: number, event: React.MouseEvent) => {
     const { date } = last4Days[dayIndex];
     const history = getHabitHistory(habitId);
     const currentValue = history[dayIndex];
-    await onToggleHabit(habitId, date, !currentValue);
+    const newValue = !currentValue;
+
+    // Fire confetti when marking as complete
+    if (newValue) {
+      const rect = (event.target as HTMLElement).getBoundingClientRect();
+      const x = (rect.left + rect.width / 2) / window.innerWidth;
+      const y = (rect.top + rect.height / 2) / window.innerHeight;
+
+      confetti({
+        particleCount: 50,
+        spread: 60,
+        origin: { x, y },
+        colors: ['#f59e0b', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6'],
+        ticks: 100,
+        gravity: 1.2,
+        scalar: 0.8,
+        drift: 0
+      });
+    }
+
+    await onToggleHabit(habitId, date, newValue);
   };
 
   const handleOpenNewHabit = () => {
@@ -301,7 +322,7 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
                         return (
                           <button
                             key={index}
-                            onClick={() => handleToggle(habit.id, index)}
+                            onClick={(e) => handleToggle(habit.id, index, e)}
                             className={`
                               ${isToday ? 'w-6 h-6 sm:w-7 sm:h-7 ring-2 ring-primary/60 ring-offset-1 ring-offset-background' : 'w-4 h-4 sm:w-5 sm:h-5'} rounded-md transition-all cursor-pointer
                               ${done
