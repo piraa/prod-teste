@@ -258,14 +258,14 @@ export const PlannerPage: React.FC<PlannerPageProps> = ({
 
   return (
     <div className="p-4 lg:p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
-            <Wand2 className="text-primary" size={28} />
+        <div className="animate-fade-in-up">
+          <h2 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+            <Wand2 className="text-primary" size={32} />
             Planejador
-          </h1>
-          <p className="text-muted-foreground mt-1">
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
             Organize suas tarefas da caixa de entrada em 3 passos
           </p>
         </div>

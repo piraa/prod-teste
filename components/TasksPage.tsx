@@ -354,12 +354,12 @@ export const TasksPage: React.FC<TasksPageProps> = ({
 
   return (
     <div className="p-4 lg:p-8">
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between animate-fade-in-up">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Minhas Tarefas</h1>
-            <p className="text-muted-foreground mt-1">
+            <h2 className="text-3xl font-bold tracking-tight">Minhas Tarefas</h2>
+            <p className="text-sm text-muted-foreground mt-1">
               {tasks.filter(t => !t.completed).length} tarefas pendentes
             </p>
           </div>

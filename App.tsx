@@ -741,8 +741,13 @@ function App() {
 
           {currentPage === 'habits' && (
             <div className="p-4 lg:p-8">
-              <div className="max-w-3xl mx-auto">
-                <h1 className="text-2xl font-bold mb-6">Meus Hábitos</h1>
+              <div className="max-w-7xl mx-auto space-y-8">
+                <div className="animate-fade-in-up">
+                  <h2 className="text-3xl font-bold tracking-tight">Meus Hábitos</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Acompanhe seus hábitos diários
+                  </p>
+                </div>
                 {loadingHabits ? (
                   <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-6">
                     <p className="text-muted-foreground">Carregando hábitos...</p>
@@ -763,8 +768,13 @@ function App() {
 
           {currentPage === 'goals' && (
             <div className="p-4 lg:p-8">
-              <div className="max-w-3xl mx-auto">
-                <h1 className="text-2xl font-bold mb-6">Meus Objetivos</h1>
+              <div className="max-w-7xl mx-auto space-y-8">
+                <div className="animate-fade-in-up">
+                  <h2 className="text-3xl font-bold tracking-tight">Meus Objetivos</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Acompanhe seu progresso
+                  </p>
+                </div>
                 <GoalsWidget goals={MOCK_GOALS} />
               </div>
             </div>
@@ -772,18 +782,26 @@ function App() {
 
           {currentPage === 'notes' && (
             <div className="p-4 lg:p-8">
-              <div className="max-w-3xl mx-auto text-center py-12">
-                <h1 className="text-2xl font-bold mb-2">Anotações</h1>
-                <p className="text-muted-foreground">Em breve...</p>
+              <div className="max-w-7xl mx-auto space-y-8">
+                <div className="animate-fade-in-up">
+                  <h2 className="text-3xl font-bold tracking-tight">Anotações</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Em breve...
+                  </p>
+                </div>
               </div>
             </div>
           )}
 
           {currentPage === 'analytics' && (
             <div className="p-4 lg:p-8">
-              <div className="max-w-3xl mx-auto text-center py-12">
-                <h1 className="text-2xl font-bold mb-2">Análises</h1>
-                <p className="text-muted-foreground">Em breve...</p>
+              <div className="max-w-7xl mx-auto space-y-8">
+                <div className="animate-fade-in-up">
+                  <h2 className="text-3xl font-bold tracking-tight">Análises</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Em breve...
+                  </p>
+                </div>
               </div>
             </div>
           )}
