@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Sidebar } from './components/Sidebar';
+import { Sidebar, PageType } from './components/Sidebar';
 import { Header } from './components/Header';
 import { StatCard } from './components/StatCard';
 import { TaskList } from './components/TaskList';
+import { TasksPage } from './components/TasksPage';
 import { HabitTracker } from './components/HabitTracker';
 import { CalendarWidget } from './components/CalendarWidget';
 import { GoalsWidget } from './components/GoalsWidget';
@@ -29,6 +30,7 @@ function App() {
   const { user, loading: authLoading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [currentPage, setCurrentPage] = useState<PageType>('dashboard');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
@@ -542,7 +544,17 @@ function App() {
         />
       )}
 
-      <Sidebar userAvatar={AVATAR_URL} isOpen={sidebarOpen} />
+      <Sidebar
+        userAvatar={AVATAR_URL}
+        userName={userName}
+        userEmail={user?.email || ''}
+        isOpen={sidebarOpen}
+        currentPage={currentPage}
+        onNavigate={(page) => {
+          setCurrentPage(page);
+          setSidebarOpen(false);
+        }}
+      />
 
       <div className="flex-1 flex flex-col h-screen w-full relative">
         <Header
@@ -552,44 +564,91 @@ function App() {
           onNewTask={handleNewTask}
         />
 
-        <main className="flex-1 overflow-y-auto custom-scrollbar p-4 lg:p-8">
-          <div className="max-w-7xl mx-auto space-y-8">
-            
-            {/* Welcome Section */}
-            <div className="animate-fade-in-up">
-              <h2 className="text-3xl font-bold tracking-tight">{getGreeting()}, {userName} ⚡️</h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                {getTodayFormatted()}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {getTodayPendingTasksCount() === 0
-                  ? 'Você não tem tarefas pendentes para hoje.'
-                  : getTodayPendingTasksCount() === 1
-                  ? 'Você tem 1 tarefa para concluir hoje.'
-                  : `Você tem ${getTodayPendingTasksCount()} tarefas para concluir hoje.`}
-              </p>
-            </div>
+        <main className="flex-1 overflow-y-auto custom-scrollbar">
+          {currentPage === 'dashboard' && (
+            <div className="p-4 lg:p-8">
+              <div className="max-w-7xl mx-auto space-y-8">
 
-            {/* Main Content Grid */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-              
-              {/* Left Column (Tasks & Habits) */}
-              <div className="xl:col-span-2 space-y-8">
-                {loadingTasks ? (
-                  <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-6">
-                    <p className="text-muted-foreground">Carregando tarefas...</p>
+                {/* Welcome Section */}
+                <div className="animate-fade-in-up">
+                  <h2 className="text-3xl font-bold tracking-tight">{getGreeting()}, {userName} ⚡️</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {getTodayFormatted()}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {getTodayPendingTasksCount() === 0
+                      ? 'Você não tem tarefas pendentes para hoje.'
+                      : getTodayPendingTasksCount() === 1
+                      ? 'Você tem 1 tarefa para concluir hoje.'
+                      : `Você tem ${getTodayPendingTasksCount()} tarefas para concluir hoje.`}
+                  </p>
+                </div>
+
+                {/* Main Content Grid */}
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+
+                  {/* Left Column (Tasks & Habits) */}
+                  <div className="xl:col-span-2 space-y-8">
+                    {loadingTasks ? (
+                      <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-6">
+                        <p className="text-muted-foreground">Carregando tarefas...</p>
+                      </div>
+                    ) : (
+                      <TaskList
+                        tasks={filteredTasks}
+                        allTasks={tasks}
+                        selectedDate={selectedDate}
+                        onDateChange={setSelectedDate}
+                        onQuickAdd={handleQuickAddTask}
+                        onToggleComplete={handleToggleComplete}
+                        onEditTask={handleEditTask}
+                      />
+                    )}
+                    {loadingHabits ? (
+                      <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-6">
+                        <p className="text-muted-foreground">Carregando hábitos...</p>
+                      </div>
+                    ) : (
+                      <HabitTracker
+                        habits={habits}
+                        habitLogs={habitLogs}
+                        onToggleHabit={handleToggleHabit}
+                        onAddHabit={handleAddHabit}
+                        onUpdateHabit={handleUpdateHabit}
+                        onDeleteHabit={handleDeleteHabit}
+                      />
+                    )}
                   </div>
-                ) : (
-                  <TaskList
-                    tasks={filteredTasks}
-                    allTasks={tasks}
-                    selectedDate={selectedDate}
-                    onDateChange={setSelectedDate}
-                    onQuickAdd={handleQuickAddTask}
-                    onToggleComplete={handleToggleComplete}
-                    onEditTask={handleEditTask}
-                  />
-                )}
+
+                  {/* Right Column (Calendar & Goals) */}
+                  <div className="space-y-8">
+                    <CalendarWidget
+                      tasks={tasks}
+                      selectedDate={selectedDate}
+                      onDateChange={setSelectedDate}
+                      onEditTask={handleEditTask}
+                    />
+                    <GoalsWidget goals={MOCK_GOALS} />
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          )}
+
+          {currentPage === 'tasks' && (
+            <TasksPage
+              tasks={tasks}
+              onAddTask={handleNewTask}
+              onEditTask={handleEditTask}
+              onToggleComplete={handleToggleComplete}
+            />
+          )}
+
+          {currentPage === 'habits' && (
+            <div className="p-4 lg:p-8">
+              <div className="max-w-3xl mx-auto">
+                <h1 className="text-2xl font-bold mb-6">Meus Hábitos</h1>
                 {loadingHabits ? (
                   <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-6">
                     <p className="text-muted-foreground">Carregando hábitos...</p>
@@ -605,20 +664,35 @@ function App() {
                   />
                 )}
               </div>
+            </div>
+          )}
 
-              {/* Right Column (Calendar & Goals) */}
-              <div className="space-y-8">
-                <CalendarWidget
-                  tasks={tasks}
-                  selectedDate={selectedDate}
-                  onDateChange={setSelectedDate}
-                  onEditTask={handleEditTask}
-                />
+          {currentPage === 'goals' && (
+            <div className="p-4 lg:p-8">
+              <div className="max-w-3xl mx-auto">
+                <h1 className="text-2xl font-bold mb-6">Meus Objetivos</h1>
                 <GoalsWidget goals={MOCK_GOALS} />
               </div>
-
             </div>
-          </div>
+          )}
+
+          {currentPage === 'notes' && (
+            <div className="p-4 lg:p-8">
+              <div className="max-w-3xl mx-auto text-center py-12">
+                <h1 className="text-2xl font-bold mb-2">Anotações</h1>
+                <p className="text-muted-foreground">Em breve...</p>
+              </div>
+            </div>
+          )}
+
+          {currentPage === 'analytics' && (
+            <div className="p-4 lg:p-8">
+              <div className="max-w-3xl mx-auto text-center py-12">
+                <h1 className="text-2xl font-bold mb-2">Análises</h1>
+                <p className="text-muted-foreground">Em breve...</p>
+              </div>
+            </div>
+          )}
         </main>
       </div>
 

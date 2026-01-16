@@ -9,12 +9,25 @@ import {
   Zap
 } from 'lucide-react';
 
+export type PageType = 'dashboard' | 'tasks' | 'habits' | 'goals' | 'notes' | 'analytics';
+
 interface SidebarProps {
   userAvatar: string;
+  userName: string;
+  userEmail: string;
   isOpen: boolean;
+  currentPage: PageType;
+  onNavigate: (page: PageType) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ userAvatar, isOpen }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  userAvatar,
+  userName,
+  userEmail,
+  isOpen,
+  currentPage,
+  onNavigate
+}) => {
   const containerClasses = `
     fixed lg:static inset-y-0 left-0 z-30
     w-64 bg-sidebar text-sidebar-foreground
@@ -23,10 +36,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ userAvatar, isOpen }) => {
     ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
   `;
 
+  const navItems: { page: PageType; icon: React.ElementType; label: string }[] = [
+    { page: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { page: 'tasks', icon: CheckCircle2, label: 'Minhas Tarefas' },
+    { page: 'habits', icon: Activity, label: 'Hábitos' },
+    { page: 'goals', icon: Flag, label: 'Objetivos' },
+    { page: 'notes', icon: StickyNote, label: 'Anotações' },
+    { page: 'analytics', icon: BarChart2, label: 'Análises' },
+  ];
+
   return (
     <aside className={containerClasses}>
       <div className="p-6">
-        <div className="flex items-center gap-3 mb-8">
+        <div
+          className="flex items-center gap-3 mb-8 cursor-pointer"
+          onClick={() => onNavigate('dashboard')}
+        >
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold text-xl shadow-sm">
             P
           </div>
@@ -34,12 +59,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ userAvatar, isOpen }) => {
         </div>
 
         <nav className="space-y-1">
-          <NavItem icon={LayoutDashboard} label="Dashboard" active />
-          <NavItem icon={CheckCircle2} label="Minhas Tarefas" />
-          <NavItem icon={Activity} label="Hábitos" />
-          <NavItem icon={Flag} label="Objetivos" />
-          <NavItem icon={StickyNote} label="Anotações" />
-          <NavItem icon={BarChart2} label="Análises" />
+          {navItems.map(({ page, icon: Icon, label }) => (
+            <NavItem
+              key={page}
+              icon={Icon}
+              label={label}
+              active={currentPage === page}
+              onClick={() => onNavigate(page)}
+            />
+          ))}
         </nav>
       </div>
 
@@ -58,14 +86,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ userAvatar, isOpen }) => {
 
         {/* User Profile */}
         <div className="flex items-center gap-3 pt-4 border-t border-sidebar-border">
-          <img 
-            src={userAvatar} 
-            alt="Ricardo Silva" 
+          <img
+            src={userAvatar}
+            alt={userName}
             className="w-10 h-10 rounded-full border-2 border-sidebar-border object-cover"
           />
           <div className="overflow-hidden">
-            <p className="text-sm font-bold truncate">Ricardo Silva</p>
-            <p className="text-xs text-muted-foreground truncate">ricardo@email.com</p>
+            <p className="text-sm font-bold truncate">{userName}</p>
+            <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
           </div>
         </div>
       </div>
@@ -89,19 +117,10 @@ const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, active, onClick })
     }
   `;
 
-  if (onClick) {
-    return (
-      <button onClick={onClick} className={`w-full text-left ${className}`}>
-        <Icon size={20} strokeWidth={2} />
-        {label}
-      </button>
-    );
-  }
-
   return (
-    <a href="#" className={className}>
+    <button onClick={onClick} className={`w-full text-left ${className}`}>
       <Icon size={20} strokeWidth={2} />
       {label}
-    </a>
+    </button>
   );
 };
