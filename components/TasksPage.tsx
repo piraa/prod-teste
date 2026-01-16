@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Plus, Search, Filter, Calendar, Inbox, CheckCircle2, Clock, ChevronDown, Check } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Plus, Search, Filter, Calendar, Inbox, CheckCircle2, Clock, ChevronDown, Check, List, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Task } from '../types';
 import { fireConfetti } from '../utils/confetti';
 
@@ -11,6 +11,7 @@ interface TasksPageProps {
 }
 
 type FilterType = 'all' | 'inbox' | 'today' | 'upcoming' | 'completed';
+type ViewType = 'list' | 'calendar';
 
 export const TasksPage: React.FC<TasksPageProps> = ({
   tasks,
@@ -18,6 +19,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({
   onEditTask,
   onToggleComplete
 }) => {
+  const [view, setView] = useState<ViewType>('list');
   const [filter, setFilter] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -27,6 +29,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({
     noDate: true,
     completed: false
   });
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -109,6 +112,81 @@ export const TasksPage: React.FC<TasksPageProps> = ({
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  };
+
+  // Calendar helpers
+  const monthNames = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+  const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+  const calendarDays = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDayOfWeek = firstDay.getDay();
+
+    const days: { date: Date; isCurrentMonth: boolean }[] = [];
+
+    // Add days from previous month
+    const prevMonthLastDay = new Date(year, month, 0).getDate();
+    for (let i = startDayOfWeek - 1; i >= 0; i--) {
+      days.push({
+        date: new Date(year, month - 1, prevMonthLastDay - i),
+        isCurrentMonth: false
+      });
+    }
+
+    // Add days from current month
+    for (let i = 1; i <= lastDay.getDate(); i++) {
+      days.push({
+        date: new Date(year, month, i),
+        isCurrentMonth: true
+      });
+    }
+
+    // Add days from next month to complete the grid
+    const remainingDays = 42 - days.length;
+    for (let i = 1; i <= remainingDays; i++) {
+      days.push({
+        date: new Date(year, month + 1, i),
+        isCurrentMonth: false
+      });
+    }
+
+    return days;
+  }, [currentMonth]);
+
+  const getTasksForDate = (date: Date): Task[] => {
+    const dateStr = date.toISOString().split('T')[0];
+    return tasks.filter(task => {
+      if (!task.due_date) return false;
+      const taskDateStr = task.due_date.split('T')[0];
+      return taskDateStr === dateStr;
+    });
+  };
+
+  const isToday = (date: Date): boolean => {
+    return date.toDateString() === today.toDateString();
+  };
+
+  const goToPrevMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+  };
+
+  const goToNextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+  };
+
+  const getPriorityColor = (priority: Task['priority']): string => {
+    switch (priority) {
+      case 'high': return 'bg-red-500';
+      case 'medium': return 'bg-amber-500';
+      case 'low': return 'bg-slate-400';
+      default: return 'bg-muted-foreground';
+    }
   };
 
   const TaskItem = ({ task }: { task: Task }) => (
@@ -250,7 +328,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Minhas Tarefas</h1>
           <p className="text-muted-foreground mt-1">
@@ -266,99 +344,223 @@ export const TasksPage: React.FC<TasksPageProps> = ({
         </button>
       </div>
 
-      {/* Search and Filters */}
-      <div className="mb-6 space-y-4">
-        {/* Search */}
-        <div className="relative">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar tarefas..."
-            className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
-
-        {/* Filter Pills */}
-        <div className="flex flex-wrap gap-2">
-          {filterButtons.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setFilter(key)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                filter === key
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground hover:bg-accent'
-              }`}
-            >
-              <Icon size={14} />
-              {label}
-              {counts[key] > 0 && (
-                <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                  filter === key ? 'bg-primary-foreground/20' : 'bg-background'
-                }`}>
-                  {counts[key]}
-                </span>
-              )}
-            </button>
-          ))}
+      {/* View Toggle */}
+      <div className="flex items-center justify-center mb-6">
+        <div className="inline-flex bg-muted rounded-lg p-1">
+          <button
+            onClick={() => setView('list')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              view === 'list'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <List size={16} />
+            Lista
+          </button>
+          <button
+            onClick={() => setView('calendar')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              view === 'calendar'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Calendar size={16} />
+            Calendário
+          </button>
         </div>
       </div>
 
-      {/* Task List */}
-      <div className="bg-background">
-        {filter === 'all' ? (
-          <>
-            <TaskSection
-              title="Atrasadas"
-              tasks={categorizedTasks.overdue}
-              sectionKey="overdue"
-              icon={Clock}
-              iconColor="text-destructive"
-            />
-            <TaskSection
-              title="Hoje"
-              tasks={categorizedTasks.today}
-              sectionKey="today"
-              icon={Calendar}
-              iconColor="text-primary"
-              emptyMessage="Nenhuma tarefa para hoje"
-            />
-            <TaskSection
-              title="Próximas"
-              tasks={categorizedTasks.upcoming}
-              sectionKey="upcoming"
-              icon={Clock}
-              iconColor="text-blue-500"
-            />
-            <TaskSection
-              title="Caixa de Entrada"
-              tasks={categorizedTasks.noDate}
-              sectionKey="noDate"
-              icon={Inbox}
-              iconColor="text-amber-500"
-            />
-            <TaskSection
-              title="Concluídas"
-              tasks={categorizedTasks.completed}
-              sectionKey="completed"
-              icon={CheckCircle2}
-              iconColor="text-green-500"
-            />
-          </>
-        ) : (
-          <div className="space-y-2">
-            {filteredTasks.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">Nenhuma tarefa encontrada</p>
-              </div>
+      {view === 'list' ? (
+        <>
+          {/* Search and Filters */}
+          <div className="mb-6 space-y-4">
+            {/* Search */}
+            <div className="relative">
+              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar tarefas..."
+                className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            {/* Filter Pills */}
+            <div className="flex flex-wrap gap-2">
+              {filterButtons.map(({ key, label, icon: Icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setFilter(key)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    filter === key
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground hover:bg-accent'
+                  }`}
+                >
+                  <Icon size={14} />
+                  {label}
+                  {counts[key] > 0 && (
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                      filter === key ? 'bg-primary-foreground/20' : 'bg-background'
+                    }`}>
+                      {counts[key]}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Task List */}
+          <div className="bg-background">
+            {filter === 'all' ? (
+              <>
+                <TaskSection
+                  title="Atrasadas"
+                  tasks={categorizedTasks.overdue}
+                  sectionKey="overdue"
+                  icon={Clock}
+                  iconColor="text-destructive"
+                />
+                <TaskSection
+                  title="Hoje"
+                  tasks={categorizedTasks.today}
+                  sectionKey="today"
+                  icon={Calendar}
+                  iconColor="text-primary"
+                  emptyMessage="Nenhuma tarefa para hoje"
+                />
+                <TaskSection
+                  title="Próximas"
+                  tasks={categorizedTasks.upcoming}
+                  sectionKey="upcoming"
+                  icon={Clock}
+                  iconColor="text-blue-500"
+                />
+                <TaskSection
+                  title="Caixa de Entrada"
+                  tasks={categorizedTasks.noDate}
+                  sectionKey="noDate"
+                  icon={Inbox}
+                  iconColor="text-amber-500"
+                />
+                <TaskSection
+                  title="Concluídas"
+                  tasks={categorizedTasks.completed}
+                  sectionKey="completed"
+                  icon={CheckCircle2}
+                  iconColor="text-green-500"
+                />
+              </>
             ) : (
-              filteredTasks.map(task => <TaskItem key={task.id} task={task} />)
+              <div className="space-y-2">
+                {filteredTasks.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground">Nenhuma tarefa encontrada</p>
+                  </div>
+                ) : (
+                  filteredTasks.map(task => <TaskItem key={task.id} task={task} />)
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
+        </>
+      ) : (
+        /* Calendar View */
+        <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+          {/* Calendar Header */}
+          <div className="p-4 border-b border-border flex items-center justify-between">
+            <h3 className="font-bold text-lg">
+              {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+            </h3>
+            <div className="flex gap-2">
+              <button
+                onClick={goToPrevMonth}
+                className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button
+                onClick={goToNextMonth}
+                className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          </div>
+
+          {/* Calendar Grid */}
+          <div className="p-4">
+            {/* Week day headers */}
+            <div className="grid grid-cols-7 mb-2">
+              {weekDays.map((day) => (
+                <div key={day} className="text-center text-xs font-bold text-muted-foreground uppercase py-2">
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Calendar days */}
+            <div className="grid grid-cols-7 gap-1">
+              {calendarDays.map((day, i) => {
+                const dayTasks = getTasksForDate(day.date);
+                const incompleteTasks = dayTasks.filter(t => !t.completed);
+                const completedTasks = dayTasks.filter(t => t.completed);
+
+                return (
+                  <div
+                    key={i}
+                    className={`
+                      min-h-[100px] p-2 rounded-lg border transition-colors
+                      ${day.isCurrentMonth ? 'bg-background border-border' : 'bg-muted/30 border-transparent'}
+                      ${isToday(day.date) ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}
+                    `}
+                  >
+                    <div className={`text-sm font-medium mb-1 ${
+                      !day.isCurrentMonth ? 'text-muted-foreground/50' :
+                      isToday(day.date) ? 'text-primary font-bold' : 'text-foreground'
+                    }`}>
+                      {day.date.getDate()}
+                    </div>
+
+                    {/* Tasks for this day */}
+                    <div className="space-y-1">
+                      {incompleteTasks.slice(0, 3).map((task) => (
+                        <div
+                          key={task.id}
+                          onClick={() => onEditTask(task)}
+                          className="flex items-center gap-1 p-1 rounded text-xs bg-accent/50 hover:bg-accent cursor-pointer truncate"
+                        >
+                          <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} />
+                          <span className="truncate">{task.title}</span>
+                        </div>
+                      ))}
+                      {completedTasks.slice(0, 1).map((task) => (
+                        <div
+                          key={task.id}
+                          onClick={() => onEditTask(task)}
+                          className="flex items-center gap-1 p-1 rounded text-xs bg-green-500/10 hover:bg-green-500/20 cursor-pointer truncate"
+                        >
+                          <Check size={10} className="text-green-500 flex-shrink-0" />
+                          <span className="truncate line-through text-muted-foreground">{task.title}</span>
+                        </div>
+                      ))}
+                      {dayTasks.length > 4 && (
+                        <div className="text-[10px] text-muted-foreground text-center">
+                          +{dayTasks.length - 4} mais
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
