@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { ListTodo, ChevronLeft, ChevronRight, ChevronDown, Check } from 'lucide-react';
+import { ListTodo, ChevronLeft, ChevronRight, ChevronDown, Check, Inbox } from 'lucide-react';
 import { Task } from '../types';
 
 interface TaskListProps {
   tasks: Task[];
+  allTasks: Task[]; // All tasks including those without due_date
   selectedDate: Date;
   onDateChange: (date: Date) => void;
   onQuickAdd?: (title: string) => Promise<void>;
@@ -13,6 +14,7 @@ interface TaskListProps {
 
 export const TaskList: React.FC<TaskListProps> = ({
   tasks,
+  allTasks,
   selectedDate,
   onDateChange,
   onQuickAdd,
@@ -22,6 +24,10 @@ export const TaskList: React.FC<TaskListProps> = ({
   const [quickTaskTitle, setQuickTaskTitle] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [showInbox, setShowInbox] = useState(false);
+
+  // Inbox: tasks without due_date
+  const inboxTasks = allTasks.filter((task) => !task.due_date && !task.completed);
 
   const pendingTasks = tasks.filter((task) => !task.completed);
   const completedTasks = tasks.filter((task) => task.completed);
@@ -203,6 +209,34 @@ export const TaskList: React.FC<TaskListProps> = ({
             <div className="px-6 pb-6 space-y-5">
               {completedTasks.map((task) => (
                 <TaskItem key={task.id} task={task} isCompleted={true} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Inbox - Tasks without due date */}
+      {inboxTasks.length > 0 && (
+        <div className="border-t border-border">
+          <button
+            onClick={() => setShowInbox(!showInbox)}
+            className="w-full px-6 py-3 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Inbox size={16} className="text-primary" />
+            <span className="flex-1 text-left">Caixa de Entrada</span>
+            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+              {inboxTasks.length}
+            </span>
+            <ChevronDown
+              size={16}
+              className={`transition-transform ${showInbox ? 'rotate-180' : ''}`}
+            />
+          </button>
+
+          {showInbox && (
+            <div className="px-6 pb-6 space-y-5">
+              {inboxTasks.map((task) => (
+                <TaskItem key={task.id} task={task} isCompleted={false} />
               ))}
             </div>
           )}

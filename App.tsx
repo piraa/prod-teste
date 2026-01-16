@@ -582,6 +582,7 @@ function App() {
                 ) : (
                   <TaskList
                     tasks={filteredTasks}
+                    allTasks={tasks}
                     selectedDate={selectedDate}
                     onDateChange={setSelectedDate}
                     onQuickAdd={handleQuickAddTask}
