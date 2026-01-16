@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Clock, Trash2 } from 'lucide-react';
+import { X, Clock, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Task } from '../types';
 
 interface TaskModalProps {
@@ -47,6 +47,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [deleting, setDeleting] = useState(false);
   const [showCustomEstimate, setShowCustomEstimate] = useState(false);
   const [customEstimateInput, setCustomEstimateInput] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const isEditing = !!task;
 
@@ -73,6 +74,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     return mins > 0 ? `${hours}h${mins}` : `${hours}h`;
   };
 
+  // Check if task has advanced options filled
+  const hasAdvancedOptions = () => {
+    return !!(description || dueDate || startTime || endTime || estimatedMinutes);
+  };
+
   // Populate form when editing
   useEffect(() => {
     if (task) {
@@ -87,6 +93,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       const isCustom = task.estimated_minutes && !ESTIMATE_OPTIONS.some(opt => opt.value === task.estimated_minutes);
       setShowCustomEstimate(isCustom || false);
       setCustomEstimateInput(isCustom && task.estimated_minutes ? task.estimated_minutes.toString() : '');
+      // Auto-expand if task has advanced options
+      const hasAdvanced = !!(task.description || task.due_date || task.start_time || task.end_time || task.estimated_minutes);
+      setShowAdvanced(hasAdvanced);
     } else {
       // Reset form for new task
       setTitle('');
@@ -98,6 +107,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setEndTime('');
       setShowCustomEstimate(false);
       setCustomEstimateInput('');
+      setShowAdvanced(false);
     }
   }, [task, isOpen]);
 
@@ -165,33 +175,23 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          {/* Tarefa (título) */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              Título *
+              Tarefa *
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Digite o título da tarefa"
+              placeholder="O que você precisa fazer?"
               className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               required
+              autoFocus
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Descrição
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descrição opcional"
-              rows={3}
-              className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-            />
-          </div>
-
+          {/* Prioridade */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
               Prioridade
@@ -218,115 +218,154 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Data Programada
-            </label>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
+          {/* Botão para expandir opções avançadas */}
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full justify-center py-2"
+          >
+            {showAdvanced ? (
+              <>
+                <ChevronUp size={16} />
+                Ocultar opções
+              </>
+            ) : (
+              <>
+                <ChevronDown size={16} />
+                Mais opções
+              </>
+            )}
+          </button>
 
-          {/* Horários */}
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              <Clock size={14} className="inline mr-1" />
-              Horário
-            </label>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  placeholder="Início"
-                  className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          {/* Opções avançadas */}
+          {showAdvanced && (
+            <div className="space-y-4 pt-2 border-t border-border">
+              {/* Descrição */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  Descrição
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Descrição opcional"
+                  rows={3}
+                  className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                 />
-                <span className="text-xs text-muted-foreground mt-1 block">Início</span>
               </div>
-              <div className="flex-1">
+
+              {/* Data Programada */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  Data Programada
+                </label>
                 <input
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  placeholder="Fim"
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
                   className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 />
-                <span className="text-xs text-muted-foreground mt-1 block">Fim</span>
+              </div>
+
+              {/* Horários */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  <Clock size={14} className="inline mr-1" />
+                  Horário
+                </label>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <input
+                      type="time"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      placeholder="Início"
+                      className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <span className="text-xs text-muted-foreground mt-1 block">Início</span>
+                  </div>
+                  <div className="flex-1">
+                    <input
+                      type="time"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      placeholder="Fim"
+                      className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <span className="text-xs text-muted-foreground mt-1 block">Fim</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Estimativa */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  Estimativa de Duração
+                </label>
+                {hasDefinedTimes && calculatedEstimate ? (
+                  <div className="px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg">
+                    <span className="text-sm font-medium text-primary">
+                      {formatEstimate(calculatedEstimate)}
+                    </span>
+                    <span className="text-xs text-muted-foreground ml-2">
+                      (calculado automaticamente)
+                    </span>
+                  </div>
+                ) : showCustomEstimate ? (
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="number"
+                      value={customEstimateInput}
+                      onChange={(e) => {
+                        setCustomEstimateInput(e.target.value);
+                        const value = parseInt(e.target.value);
+                        setEstimatedMinutes(value > 0 ? value : null);
+                      }}
+                      placeholder="Minutos"
+                      min="1"
+                      className="flex-1 px-3 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <span className="text-sm text-muted-foreground">min</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCustomEstimate(false);
+                        setCustomEstimateInput('');
+                        setEstimatedMinutes(null);
+                      }}
+                      className="px-3 py-2 rounded-lg text-sm font-medium bg-muted text-muted-foreground hover:bg-accent transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {ESTIMATE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setEstimatedMinutes(estimatedMinutes === opt.value ? null : opt.value)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                          estimatedMinutes === opt.value
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground hover:bg-accent'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomEstimate(true)}
+                      className="px-3 py-1.5 rounded-lg text-sm font-medium bg-muted text-muted-foreground hover:bg-accent transition-colors"
+                    >
+                      Personalizado
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-
-          {/* Estimativa */}
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              Estimativa de Duração
-            </label>
-            {hasDefinedTimes && calculatedEstimate ? (
-              <div className="px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg">
-                <span className="text-sm font-medium text-primary">
-                  {formatEstimate(calculatedEstimate)}
-                </span>
-                <span className="text-xs text-muted-foreground ml-2">
-                  (calculado automaticamente)
-                </span>
-              </div>
-            ) : showCustomEstimate ? (
-              <div className="flex gap-2 items-center">
-                <input
-                  type="number"
-                  value={customEstimateInput}
-                  onChange={(e) => {
-                    setCustomEstimateInput(e.target.value);
-                    const value = parseInt(e.target.value);
-                    setEstimatedMinutes(value > 0 ? value : null);
-                  }}
-                  placeholder="Minutos"
-                  min="1"
-                  className="flex-1 px-3 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-                <span className="text-sm text-muted-foreground">min</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCustomEstimate(false);
-                    setCustomEstimateInput('');
-                    setEstimatedMinutes(null);
-                  }}
-                  className="px-3 py-2 rounded-lg text-sm font-medium bg-muted text-muted-foreground hover:bg-accent transition-colors"
-                >
-                  Cancelar
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {ESTIMATE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setEstimatedMinutes(estimatedMinutes === opt.value ? null : opt.value)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      estimatedMinutes === opt.value
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-muted-foreground hover:bg-accent'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setShowCustomEstimate(true)}
-                  className="px-3 py-1.5 rounded-lg text-sm font-medium bg-muted text-muted-foreground hover:bg-accent transition-colors"
-                >
-                  Personalizado
-                </button>
-              </div>
-            )}
-          </div>
+          )}
 
           <div className="flex gap-3 pt-2">
             {isEditing && onDelete && (
