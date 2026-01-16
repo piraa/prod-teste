@@ -71,11 +71,11 @@ export const ChatCenterbar: React.FC = () => {
       {/* Main container */}
       <div className={`fixed z-50 transition-all duration-300 ease-out ${
         isExpanded
-          ? 'bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4'
-          : 'bottom-6 left-1/2 -translate-x-1/2 w-full max-w-md px-4'
+          ? 'bottom-8 left-1/2 -translate-x-1/2 w-full max-w-3xl px-4'
+          : 'bottom-6 left-1/2 -translate-x-1/2 w-full max-w-xl px-4'
       }`}>
         <div className={`bg-card border border-border rounded-2xl shadow-lg overflow-hidden transition-all duration-300 ${
-          isExpanded ? 'h-[500px]' : 'h-12'
+          isExpanded ? 'h-[600px] max-h-[80vh]' : 'h-14'
         }`}>
           {isExpanded ? (
             <ChatPanel
