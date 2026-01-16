@@ -100,7 +100,7 @@ export const ChatCenterbar: React.FC = () => {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onFocus={() => setIsExpanded(true)}
-                placeholder="Pergunte ou peca algo... (Cmd+K)"
+                placeholder="Pergunte ou solicite algo ao seu assistente"
                 className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground"
               />
               <button

@@ -170,7 +170,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Digite sua mensagem..."
+              placeholder="Pergunte ou solicite algo ao seu assistente"
               className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground"
               disabled={isLoading}
             />
