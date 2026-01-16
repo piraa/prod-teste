@@ -9,6 +9,7 @@ interface TasksPageProps {
   onEditTask: (task: Task) => void;
   onToggleComplete: (taskId: string, completed: boolean) => Promise<void>;
   onUpdateTaskTime?: (taskId: string, date: string, startTime: string, endTime: string) => Promise<void>;
+  onUpdateTaskDate?: (taskId: string, date: string) => Promise<void>;
   onQuickAddTask?: (title: string, dueDate: string) => Promise<void>;
 }
 
@@ -30,6 +31,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({
   onEditTask,
   onToggleComplete,
   onUpdateTaskTime,
+  onUpdateTaskDate,
   onQuickAddTask
 }) => {
   const [startDate, setStartDate] = useState(() => {
@@ -41,6 +43,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({
   // Drag state
   const [draggingTask, setDraggingTask] = useState<Task | null>(null);
   const [dragOverSlot, setDragOverSlot] = useState<{ date: string; time: string } | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
 
   // Quick add state per column
   const [quickAddColumn, setQuickAddColumn] = useState<string | null>(null);
@@ -212,6 +215,43 @@ export const TasksPage: React.FC<TasksPageProps> = ({
     setDragOverSlot(null);
   };
 
+  // Column drag handlers (for moving between days)
+  const handleColumnDragOver = (e: React.DragEvent, dateStr: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverColumn(dateStr);
+  };
+
+  const handleColumnDragLeave = (e: React.DragEvent) => {
+    // Only clear if leaving the column entirely
+    const relatedTarget = e.relatedTarget as HTMLElement;
+    if (!relatedTarget || !e.currentTarget.contains(relatedTarget)) {
+      setDragOverColumn(null);
+    }
+  };
+
+  const handleColumnDrop = async (e: React.DragEvent, dateStr: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!draggingTask) return;
+
+    // If the task already has this date, don't update
+    const currentDateStr = draggingTask.due_date?.split('T')[0];
+    if (currentDateStr === dateStr) {
+      setDraggingTask(null);
+      setDragOverColumn(null);
+      return;
+    }
+
+    if (onUpdateTaskDate) {
+      await onUpdateTaskDate(draggingTask.id, dateStr);
+    }
+
+    setDraggingTask(null);
+    setDragOverColumn(null);
+  };
+
   // Quick add handler
   const handleQuickAdd = async (dateStr: string) => {
     if (!quickAddTitle.trim()) {
@@ -341,12 +381,17 @@ export const TasksPage: React.FC<TasksPageProps> = ({
             // Calculate total estimated time
             const totalMinutes = dayTasks.reduce((sum, t) => sum + (t.estimated_minutes || 0), 0);
 
+            const isDragOver = dragOverColumn === dateStr;
+
             return (
               <div
                 key={dateStr}
-                className={`flex-1 min-w-[200px] max-w-[280px] border-r border-border flex flex-col ${
+                onDragOver={(e) => handleColumnDragOver(e, dateStr)}
+                onDragLeave={handleColumnDragLeave}
+                onDrop={(e) => handleColumnDrop(e, dateStr)}
+                className={`flex-1 min-w-[200px] max-w-[280px] border-r border-border flex flex-col transition-colors ${
                   isToday ? 'bg-primary/5' : 'bg-background'
-                }`}
+                } ${isDragOver ? 'bg-primary/10 ring-2 ring-inset ring-primary/30' : ''}`}
               >
                 {/* Day Header */}
                 <div className="p-4 border-b border-border">

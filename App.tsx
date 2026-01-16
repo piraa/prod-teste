@@ -368,6 +368,29 @@ function App() {
     }
   };
 
+  // Update task date only (for dragging between day columns)
+  const handleUpdateTaskDate = async (taskId: string, date: string) => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('tasks')
+      .update({
+        due_date: date,
+      })
+      .eq('id', taskId)
+      .eq('user_id', user.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Erro ao atualizar data da tarefa:', error);
+    } else if (data) {
+      setTasks((prev) =>
+        prev.map((task) => (task.id === taskId ? data : task))
+      );
+    }
+  };
+
   // Toggle habit completion for a specific date
   const handleToggleHabit = async (habitId: string, date: string, completed: boolean) => {
     if (!user) return;
@@ -694,6 +717,7 @@ function App() {
               onEditTask={handleEditTask}
               onToggleComplete={handleToggleComplete}
               onUpdateTaskTime={handleUpdateTaskTime}
+              onUpdateTaskDate={handleUpdateTaskDate}
               onQuickAddTask={handleQuickAddTaskWithDate}
             />
           )}
