@@ -556,7 +556,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({
                   className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-sm font-medium transition-colors"
                 >
                   <Wand2 size={16} />
-                  Planejar com IA
+                  Planejar com o Produtivo.AI
                 </button>
               )}
             </div>
