@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Search, Filter, Calendar, Inbox, CheckCircle2, Clock, ChevronDown, Check } from 'lucide-react';
 import { Task } from '../types';
+import { fireConfetti } from '../utils/confetti';
 
 interface TasksPageProps {
   tasks: Task[];
@@ -117,7 +118,11 @@ export const TasksPage: React.FC<TasksPageProps> = ({
       <button
         onClick={(e) => {
           e.stopPropagation();
-          onToggleComplete(task.id, !task.completed);
+          const newValue = !task.completed;
+          if (newValue) {
+            fireConfetti(e);
+          }
+          onToggleComplete(task.id, newValue);
         }}
         className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0
           ${task.completed

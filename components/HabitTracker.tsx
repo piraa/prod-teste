@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { History, Plus, Flame, Target } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { Habit, HabitLog } from '../types';
 import { HabitModal } from './HabitModal';
+import { fireConfetti } from '../utils/confetti';
 
 interface HabitTrackerProps {
   habits: Habit[];
@@ -189,20 +189,7 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
 
     // Fire confetti when marking as complete
     if (newValue) {
-      const rect = (event.target as HTMLElement).getBoundingClientRect();
-      const x = (rect.left + rect.width / 2) / window.innerWidth;
-      const y = (rect.top + rect.height / 2) / window.innerHeight;
-
-      confetti({
-        particleCount: 50,
-        spread: 60,
-        origin: { x, y },
-        colors: ['#f59e0b', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6'],
-        ticks: 100,
-        gravity: 1.2,
-        scalar: 0.8,
-        drift: 0
-      });
+      fireConfetti(event);
     }
 
     await onToggleHabit(habitId, date, newValue);

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ListTodo, ChevronLeft, ChevronRight, ChevronDown, Check, Inbox } from 'lucide-react';
 import { Task } from '../types';
+import { fireConfetti } from '../utils/confetti';
 
 interface TaskListProps {
   tasks: Task[];
@@ -46,9 +47,16 @@ export const TaskList: React.FC<TaskListProps> = ({
     }
   };
 
-  const handleToggleComplete = async (taskId: string, currentCompleted: boolean) => {
+  const handleToggleComplete = async (taskId: string, currentCompleted: boolean, event: React.MouseEvent) => {
+    const newValue = !currentCompleted;
+
+    // Fire confetti when completing a task
+    if (newValue) {
+      fireConfetti(event);
+    }
+
     if (onToggleComplete) {
-      await onToggleComplete(taskId, !currentCompleted);
+      await onToggleComplete(taskId, newValue);
     }
   };
 
@@ -106,7 +114,7 @@ export const TaskList: React.FC<TaskListProps> = ({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            handleToggleComplete(task.id, task.completed);
+            handleToggleComplete(task.id, task.completed, e);
           }}
           className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer
             ${isCompleted
