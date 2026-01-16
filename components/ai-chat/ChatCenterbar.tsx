@@ -74,8 +74,8 @@ export const ChatCenterbar: React.FC = () => {
           ? 'bottom-8 left-1/2 -translate-x-1/2 w-full max-w-3xl px-4'
           : 'bottom-6 left-1/2 -translate-x-1/2 w-full max-w-xl px-4'
       }`}>
-        <div className={`bg-card border border-border rounded-2xl shadow-lg overflow-hidden transition-all duration-300 ${
-          isExpanded ? 'h-[600px] max-h-[80vh]' : 'h-14'
+        <div className={`bg-card border border-border rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] overflow-hidden transition-all duration-300 ${
+          isExpanded ? 'h-[600px] max-h-[80vh]' : 'h-16'
         }`}>
           {isExpanded ? (
             <ChatPanel
