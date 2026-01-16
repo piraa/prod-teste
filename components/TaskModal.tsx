@@ -220,7 +220,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              Data de Vencimento
+              Data Programada
             </label>
             <input
               type="date"
