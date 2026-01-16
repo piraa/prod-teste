@@ -370,9 +370,9 @@ export const TasksPage: React.FC<TasksPageProps> = ({
         </div>
 
         {/* Row 1: Daily Focus + Calendar */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Daily Focus */}
-          <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm overflow-hidden">
+          <div className="lg:col-span-2 bg-card text-card-foreground rounded-xl border border-border shadow-sm overflow-hidden">
             <div className="p-6 border-b border-border flex items-center justify-between">
               <h3 className="font-bold flex items-center gap-2">
                 <ListTodo className="text-primary" size={20} />
@@ -470,31 +470,31 @@ export const TasksPage: React.FC<TasksPageProps> = ({
           </div>
 
           {/* Calendar */}
-          <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold flex items-center gap-2">
-                <Calendar className="text-primary" size={20} />
+          <div className="bg-card text-card-foreground rounded-xl border border-border shadow-sm p-4 h-fit">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-sm flex items-center gap-2">
+                <Calendar className="text-primary" size={16} />
                 {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
               </h3>
-              <div className="flex gap-2">
+              <div className="flex gap-1">
                 <button
                   onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
                   className="p-1 rounded hover:bg-accent text-muted-foreground transition-colors"
                 >
-                  <ChevronLeft size={18} />
+                  <ChevronLeft size={16} />
                 </button>
                 <button
                   onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
                   className="p-1 rounded hover:bg-accent text-muted-foreground transition-colors"
                 >
-                  <ChevronRight size={18} />
+                  <ChevronRight size={16} />
                 </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-7 gap-y-2 text-center text-xs">
+            <div className="grid grid-cols-7 gap-y-1 text-center text-[11px]">
               {weekDays.map((d) => (
-                <span key={d} className="font-bold text-muted-foreground uppercase py-2">{d}</span>
+                <span key={d} className="font-bold text-muted-foreground uppercase py-1">{d}</span>
               ))}
 
               {calendarDays.map((day, i) => {
@@ -507,7 +507,7 @@ export const TasksPage: React.FC<TasksPageProps> = ({
                     key={i}
                     onClick={() => setSelectedDate(day.date)}
                     className={`
-                      relative py-1.5 flex flex-col items-center justify-center font-medium rounded-lg transition-all
+                      relative py-1 flex flex-col items-center justify-center font-medium rounded transition-all
                       ${!day.isCurrentMonth ? 'text-muted-foreground/40' : 'text-foreground'}
                       ${isToday(day.date) && !isSelected(day.date) ? 'bg-accent text-accent-foreground' : ''}
                       ${isSelected(day.date) ? 'bg-primary text-primary-foreground font-bold shadow-sm' : ''}
@@ -516,9 +516,9 @@ export const TasksPage: React.FC<TasksPageProps> = ({
                   >
                     <span>{day.date.getDate()}</span>
                     {hasTasks && (
-                      <div className="flex gap-0.5 mt-0.5">
+                      <div className="flex gap-0.5">
                         <Circle
-                          size={4}
+                          size={3}
                           className={`${hasIncompleteTasks ? 'fill-primary text-primary' : 'fill-muted-foreground/50 text-muted-foreground/50'}`}
                         />
                       </div>
