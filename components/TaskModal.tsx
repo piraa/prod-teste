@@ -45,6 +45,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [endTime, setEndTime] = useState('');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showCustomEstimate, setShowCustomEstimate] = useState(false);
+  const [customEstimateInput, setCustomEstimateInput] = useState('');
 
   const isEditing = !!task;
 
@@ -81,6 +83,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setEstimatedMinutes(task.estimated_minutes);
       setStartTime(task.start_time ? task.start_time.substring(0, 5) : '');
       setEndTime(task.end_time ? task.end_time.substring(0, 5) : '');
+      // Check if estimate is custom (not in predefined options)
+      const isCustom = task.estimated_minutes && !ESTIMATE_OPTIONS.some(opt => opt.value === task.estimated_minutes);
+      setShowCustomEstimate(isCustom || false);
+      setCustomEstimateInput(isCustom && task.estimated_minutes ? task.estimated_minutes.toString() : '');
     } else {
       // Reset form for new task
       setTitle('');
@@ -90,6 +96,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setEstimatedMinutes(null);
       setStartTime('');
       setEndTime('');
+      setShowCustomEstimate(false);
+      setCustomEstimateInput('');
     }
   }, [task, isOpen]);
 
@@ -266,6 +274,33 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   (calculado automaticamente)
                 </span>
               </div>
+            ) : showCustomEstimate ? (
+              <div className="flex gap-2 items-center">
+                <input
+                  type="number"
+                  value={customEstimateInput}
+                  onChange={(e) => {
+                    setCustomEstimateInput(e.target.value);
+                    const value = parseInt(e.target.value);
+                    setEstimatedMinutes(value > 0 ? value : null);
+                  }}
+                  placeholder="Minutos"
+                  min="1"
+                  className="flex-1 px-3 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <span className="text-sm text-muted-foreground">min</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCustomEstimate(false);
+                    setCustomEstimateInput('');
+                    setEstimatedMinutes(null);
+                  }}
+                  className="px-3 py-2 rounded-lg text-sm font-medium bg-muted text-muted-foreground hover:bg-accent transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {ESTIMATE_OPTIONS.map((opt) => (
@@ -282,6 +317,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     {opt.label}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  onClick={() => setShowCustomEstimate(true)}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium bg-muted text-muted-foreground hover:bg-accent transition-colors"
+                >
+                  Personalizado
+                </button>
               </div>
             )}
           </div>
