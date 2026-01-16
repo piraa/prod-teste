@@ -29,7 +29,7 @@ const MOCK_GOALS: Goal[] = [
 const AVATAR_URL = "https://lh3.googleusercontent.com/aida-public/AB6AXuDdbeaqp5CUaSkkQE5f5-WV10ZXKj9NGALSmdh04mqlJZhzIPflnSU_uw5K-JfH_1norVgLHEccFMlmpPf2K4yY9O27qRKA8uSQKet7cLdEpeMUYvnMhmpAnKobj_8_OHbO3SCqAosf0SlGFK7RA7c3-hMvHPcZx_gEqHRk_-YAWIdemt51SwUKywaAXV8xeON7cPpfHZlgck_yuMkWJTgnJcBMihZHC5hm-O77vrzdNMMaAUEnOKXDHc1873FTV-DDUeOTAI67";
 
 function App() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [currentPage, setCurrentPage] = useState<PageType>('dashboard');
@@ -638,6 +638,7 @@ function App() {
           setCurrentPage(page);
           setSidebarOpen(false);
         }}
+        onSignOut={signOut}
       />
 
       <div className="flex-1 flex flex-col h-screen w-full relative">

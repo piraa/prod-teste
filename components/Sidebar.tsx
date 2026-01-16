@@ -6,7 +6,8 @@ import {
   Flag,
   StickyNote,
   BarChart2,
-  Zap
+  Zap,
+  LogOut
 } from 'lucide-react';
 
 export type PageType = 'dashboard' | 'tasks' | 'habits' | 'goals' | 'notes' | 'analytics' | 'planner';
@@ -18,6 +19,7 @@ interface SidebarProps {
   isOpen: boolean;
   currentPage: PageType;
   onNavigate: (page: PageType) => void;
+  onSignOut?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -26,7 +28,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   userEmail,
   isOpen,
   currentPage,
-  onNavigate
+  onNavigate,
+  onSignOut
 }) => {
   const containerClasses = `
     fixed lg:static inset-y-0 left-0 z-30
@@ -91,10 +94,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
             alt={userName}
             className="w-10 h-10 rounded-full border-2 border-sidebar-border object-cover"
           />
-          <div className="overflow-hidden">
+          <div className="overflow-hidden flex-1">
             <p className="text-sm font-bold truncate">{userName}</p>
             <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
           </div>
+          {onSignOut && (
+            <button
+              onClick={onSignOut}
+              className="p-2 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+              title="Sair"
+            >
+              <LogOut size={18} />
+            </button>
+          )}
         </div>
       </div>
     </aside>
