@@ -16,6 +16,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
   onEditTask
 }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [showAllTasks, setShowAllTasks] = useState(false);
   const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
   // Get month name in Portuguese
@@ -101,6 +102,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
 
   // Handle day click
   const handleDayClick = (date: Date) => {
+    setShowAllTasks(false); // Reset expansion when changing date
     onDateChange(date);
   };
 
@@ -206,7 +208,7 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
         {selectedDateTasks.length === 0 ? (
           <p className="text-sm text-muted-foreground py-2">Nenhuma tarefa para este dia</p>
         ) : (
-          selectedDateTasks.slice(0, 3).map((task) => (
+          (showAllTasks ? selectedDateTasks : selectedDateTasks.slice(0, 3)).map((task) => (
             <div
               key={task.id}
               onClick={() => onEditTask?.(task)}
@@ -228,9 +230,12 @@ export const CalendarWidget: React.FC<CalendarWidgetProps> = ({
         )}
 
         {selectedDateTasks.length > 3 && (
-          <p className="text-xs text-muted-foreground text-center pt-1">
-            +{selectedDateTasks.length - 3} mais tarefas
-          </p>
+          <button
+            onClick={() => setShowAllTasks(!showAllTasks)}
+            className="text-xs text-primary hover:text-primary/80 text-center pt-1 w-full transition-colors"
+          >
+            {showAllTasks ? 'Mostrar menos' : `+${selectedDateTasks.length - 3} mais tarefas`}
+          </button>
         )}
       </div>
     </div>
