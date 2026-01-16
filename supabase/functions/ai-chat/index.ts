@@ -162,6 +162,69 @@ const functionDeclarations = [
       required: ['habit_title'],
     },
   },
+
+  // PLANNER FUNCTIONS
+  {
+    name: 'analyze_inbox_priorities',
+    description: 'Analyze inbox tasks (without due date) and suggest priorities based on context, urgency keywords, and task descriptions.',
+    parameters: {
+      type: 'object',
+      properties: {
+        task_ids: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'IDs of tasks to analyze',
+        },
+      },
+      required: ['task_ids'],
+    },
+  },
+  {
+    name: 'estimate_task_durations',
+    description: 'Estimate execution time for tasks based on title and description complexity.',
+    parameters: {
+      type: 'object',
+      properties: {
+        task_ids: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'IDs of tasks to estimate',
+        },
+      },
+      required: ['task_ids'],
+    },
+  },
+  {
+    name: 'schedule_tasks',
+    description: 'Distribute tasks across calendar days considering priority, duration, and available time slots.',
+    parameters: {
+      type: 'object',
+      properties: {
+        task_ids: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'IDs of tasks to schedule',
+        },
+        start_date: {
+          type: 'string',
+          description: 'Start date for scheduling (YYYY-MM-DD). Defaults to today.',
+        },
+        end_date: {
+          type: 'string',
+          description: 'End date for scheduling (YYYY-MM-DD). Defaults to 7 days from start.',
+        },
+        work_start_hour: {
+          type: 'number',
+          description: 'Start hour of work day (0-23). Defaults to 9.',
+        },
+        work_end_hour: {
+          type: 'number',
+          description: 'End hour of work day (0-23). Defaults to 18.',
+        },
+      },
+      required: ['task_ids'],
+    },
+  },
 ];
 
 function getSystemPrompt(context: { userName: string; currentDate: string; timezone: string }): string {
@@ -724,6 +787,276 @@ async function executeFunction(
           entity: 'habit',
           description: `Excluindo: ${habit.title}`,
           status: error ? 'error' : 'success',
+        },
+      };
+    }
+
+    // PLANNER FUNCTIONS
+    case 'analyze_inbox_priorities': {
+      const taskIds = args.task_ids as string[];
+
+      // Fetch tasks by IDs
+      const { data: tasks, error: fetchError } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', userId)
+        .in('id', taskIds);
+
+      if (fetchError || !tasks) {
+        return {
+          name,
+          response: { error: fetchError?.message || 'Tarefas não encontradas' },
+          action: { type: 'analyze', entity: 'task', description: 'Erro ao buscar tarefas', status: 'error' },
+        };
+      }
+
+      // Analyze priorities based on keywords and context
+      const priorityKeywords = {
+        high: ['urgente', 'imediato', 'crítico', 'prazo', 'deadline', 'importante', 'prioridade', 'asap', 'cliente', 'reunião', 'apresentação', 'entrega'],
+        medium: ['revisar', 'preparar', 'organizar', 'planejar', 'analisar', 'atualizar', 'email', 'responder'],
+        low: ['estudar', 'pesquisar', 'ler', 'aprender', 'opcional', 'quando possível', 'ideias', 'futuro'],
+      };
+
+      const suggestions = tasks.map((task: { id: string; title: string; description: string | null; priority: string }) => {
+        const text = `${task.title} ${task.description || ''}`.toLowerCase();
+
+        let suggestedPriority: 'low' | 'medium' | 'high' = 'medium';
+        let reason = 'Prioridade padrão baseada no contexto';
+
+        // Check for high priority keywords
+        for (const keyword of priorityKeywords.high) {
+          if (text.includes(keyword)) {
+            suggestedPriority = 'high';
+            reason = `Contém palavra-chave de alta prioridade: "${keyword}"`;
+            break;
+          }
+        }
+
+        // Check for low priority keywords (only if not already high)
+        if (suggestedPriority !== 'high') {
+          for (const keyword of priorityKeywords.low) {
+            if (text.includes(keyword)) {
+              suggestedPriority = 'low';
+              reason = `Tarefa de desenvolvimento/aprendizado: "${keyword}"`;
+              break;
+            }
+          }
+        }
+
+        return {
+          task_id: task.id,
+          title: task.title,
+          current_priority: task.priority,
+          suggested_priority: suggestedPriority,
+          reason,
+        };
+      });
+
+      return {
+        name,
+        response: { suggestions, count: suggestions.length },
+        action: {
+          type: 'analyze',
+          entity: 'task',
+          description: `Analisando prioridades de ${tasks.length} tarefas`,
+          status: 'success',
+        },
+      };
+    }
+
+    case 'estimate_task_durations': {
+      const taskIds = args.task_ids as string[];
+
+      // Fetch tasks by IDs
+      const { data: tasks, error: fetchError } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', userId)
+        .in('id', taskIds);
+
+      if (fetchError || !tasks) {
+        return {
+          name,
+          response: { error: fetchError?.message || 'Tarefas não encontradas' },
+          action: { type: 'analyze', entity: 'task', description: 'Erro ao buscar tarefas', status: 'error' },
+        };
+      }
+
+      // Estimate durations based on task complexity
+      const durationKeywords = {
+        quick: { keywords: ['email', 'responder', 'ligar', 'agendar', 'confirmar', 'enviar', 'verificar'], minutes: 15 },
+        short: { keywords: ['revisar', 'ler', 'atualizar', 'organizar', 'limpar'], minutes: 30 },
+        medium: { keywords: ['preparar', 'criar', 'escrever', 'analisar', 'planejar', 'configurar'], minutes: 60 },
+        long: { keywords: ['desenvolver', 'implementar', 'estudar', 'pesquisar', 'documentar', 'relatório'], minutes: 120 },
+      };
+
+      const estimates = tasks.map((task: { id: string; title: string; description: string | null; estimated_minutes: number | null }) => {
+        const text = `${task.title} ${task.description || ''}`.toLowerCase();
+
+        let estimatedMinutes = 45; // Default
+        let reason = 'Estimativa padrão para tarefa comum';
+
+        // Check keywords from shortest to longest
+        for (const [, config] of Object.entries(durationKeywords)) {
+          for (const keyword of config.keywords) {
+            if (text.includes(keyword)) {
+              estimatedMinutes = config.minutes;
+              reason = `Baseado na complexidade: "${keyword}"`;
+              break;
+            }
+          }
+        }
+
+        // Adjust based on description length (longer = more complex)
+        if (task.description && task.description.length > 100) {
+          estimatedMinutes = Math.round(estimatedMinutes * 1.5);
+          reason += ' (ajustado por descrição detalhada)';
+        }
+
+        return {
+          task_id: task.id,
+          title: task.title,
+          current_minutes: task.estimated_minutes,
+          estimated_minutes: estimatedMinutes,
+          reason,
+        };
+      });
+
+      const totalMinutes = estimates.reduce((sum: number, e: { estimated_minutes: number }) => sum + e.estimated_minutes, 0);
+
+      return {
+        name,
+        response: { estimates, count: estimates.length, total_minutes: totalMinutes },
+        action: {
+          type: 'analyze',
+          entity: 'task',
+          description: `Estimando duração de ${tasks.length} tarefas`,
+          status: 'success',
+        },
+      };
+    }
+
+    case 'schedule_tasks': {
+      const taskIds = args.task_ids as string[];
+      const startDate = parseDate(args.start_date as string) || new Date().toISOString().split('T')[0];
+      const workStartHour = (args.work_start_hour as number) || 9;
+      const workEndHour = (args.work_end_hour as number) || 18;
+
+      // Calculate end date (7 days from start if not provided)
+      let endDate = args.end_date as string;
+      if (!endDate) {
+        const end = new Date(startDate);
+        end.setDate(end.getDate() + 7);
+        endDate = end.toISOString().split('T')[0];
+      }
+
+      // Fetch tasks by IDs
+      const { data: tasks, error: fetchError } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', userId)
+        .in('id', taskIds);
+
+      if (fetchError || !tasks) {
+        return {
+          name,
+          response: { error: fetchError?.message || 'Tarefas não encontradas' },
+          action: { type: 'schedule', entity: 'task', description: 'Erro ao buscar tarefas', status: 'error' },
+        };
+      }
+
+      // Fetch existing scheduled tasks to avoid conflicts
+      const { data: existingTasks } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('due_date', startDate)
+        .lte('due_date', endDate)
+        .not('start_time', 'is', null);
+
+      // Build a map of occupied time slots per day
+      const occupiedSlots: Record<string, { start: number; end: number }[]> = {};
+      (existingTasks || []).forEach((task: { due_date: string; start_time: string; end_time: string }) => {
+        if (!task.due_date || !task.start_time) return;
+        const dateKey = task.due_date.split('T')[0];
+        if (!occupiedSlots[dateKey]) occupiedSlots[dateKey] = [];
+
+        const startHour = parseInt(task.start_time.split(':')[0]);
+        const endHour = task.end_time ? parseInt(task.end_time.split(':')[0]) : startHour + 1;
+        occupiedSlots[dateKey].push({ start: startHour, end: endHour });
+      });
+
+      // Sort tasks by priority (high first)
+      const priorityOrder = { high: 0, medium: 1, low: 2 };
+      const sortedTasks = [...tasks].sort((a: { priority: string }, b: { priority: string }) =>
+        (priorityOrder[a.priority as keyof typeof priorityOrder] || 1) -
+        (priorityOrder[b.priority as keyof typeof priorityOrder] || 1)
+      );
+
+      // Schedule tasks
+      const schedule: { task_id: string; title: string; due_date: string; start_time: string; end_time: string }[] = [];
+      let currentDate = new Date(startDate);
+      const finalDate = new Date(endDate);
+
+      for (const task of sortedTasks) {
+        const duration = (task as { estimated_minutes: number | null }).estimated_minutes || 60;
+        const durationHours = Math.ceil(duration / 60);
+
+        // Find a free slot
+        let scheduled = false;
+        while (currentDate <= finalDate && !scheduled) {
+          const dateKey = currentDate.toISOString().split('T')[0];
+          const daySlots = occupiedSlots[dateKey] || [];
+
+          // Find first available slot
+          for (let hour = workStartHour; hour + durationHours <= workEndHour; hour++) {
+            const isOccupied = daySlots.some(slot =>
+              (hour >= slot.start && hour < slot.end) ||
+              (hour + durationHours > slot.start && hour + durationHours <= slot.end) ||
+              (hour <= slot.start && hour + durationHours >= slot.end)
+            );
+
+            if (!isOccupied) {
+              const startTime = `${hour.toString().padStart(2, '0')}:00`;
+              const endHour = hour + durationHours;
+              const endTime = `${endHour.toString().padStart(2, '0')}:00`;
+
+              schedule.push({
+                task_id: (task as { id: string }).id,
+                title: (task as { title: string }).title,
+                due_date: dateKey,
+                start_time: startTime,
+                end_time: endTime,
+              });
+
+              // Mark slot as occupied
+              if (!occupiedSlots[dateKey]) occupiedSlots[dateKey] = [];
+              occupiedSlots[dateKey].push({ start: hour, end: endHour });
+
+              scheduled = true;
+              break;
+            }
+          }
+
+          if (!scheduled) {
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
+        }
+
+        // Reset to start date for next task if we ran out of days
+        if (!scheduled) {
+          currentDate = new Date(startDate);
+        }
+      }
+
+      return {
+        name,
+        response: { schedule, count: schedule.length, start_date: startDate, end_date: endDate },
+        action: {
+          type: 'schedule',
+          entity: 'task',
+          description: `Agendando ${schedule.length} tarefas`,
+          status: 'success',
         },
       };
     }

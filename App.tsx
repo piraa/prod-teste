@@ -4,6 +4,7 @@ import { Header } from './components/Header';
 import { StatCard } from './components/StatCard';
 import { TaskList } from './components/TaskList';
 import { TasksPage } from './components/TasksPage';
+import { PlannerPage } from './components/PlannerPage';
 import { HabitTracker } from './components/HabitTracker';
 import { CalendarWidget } from './components/CalendarWidget';
 import { GoalsWidget } from './components/GoalsWidget';
@@ -14,6 +15,7 @@ import { ChatCenterbar } from './components/ai-chat';
 import { ChatProvider } from './contexts/ChatContext';
 import { CheckCircle2, Flame, TrendingUp, Timer, Loader2 } from 'lucide-react';
 import { Task, Habit, HabitLog, Goal } from './types';
+import { TaskUpdate } from './types/planner';
 import { supabase } from './lib/supabase';
 import { useAuth } from './contexts/AuthContext';
 
@@ -480,6 +482,62 @@ function App() {
     }
   }, []);
 
+  // Apply plan updates from the Planner
+  const handleApplyPlan = async (updates: TaskUpdate[]) => {
+    if (!user) return;
+
+    // Update each task in batch
+    const promises = updates.map(async (update) => {
+      const updateData: Record<string, unknown> = {};
+
+      if (update.priority !== undefined) {
+        updateData.priority = update.priority;
+      }
+      if (update.estimatedMinutes !== undefined) {
+        updateData.estimated_minutes = update.estimatedMinutes;
+      }
+      if (update.dueDate !== undefined) {
+        updateData.due_date = update.dueDate;
+      }
+      if (update.startTime !== undefined) {
+        updateData.start_time = update.startTime;
+      }
+      if (update.endTime !== undefined) {
+        updateData.end_time = update.endTime;
+      }
+
+      const { data, error } = await supabase
+        .from('tasks')
+        .update(updateData)
+        .eq('id', update.taskId)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Erro ao atualizar tarefa:', error);
+        return null;
+      }
+      return data;
+    });
+
+    const results = await Promise.all(promises);
+
+    // Update local state with successful updates
+    setTasks((prev) => {
+      const updatedTasks = [...prev];
+      results.forEach((result) => {
+        if (result) {
+          const index = updatedTasks.findIndex((t) => t.id === result.id);
+          if (index >= 0) {
+            updatedTasks[index] = result;
+          }
+        }
+      });
+      return updatedTasks;
+    });
+  };
+
   // Filter tasks by selected date
   const filteredTasks = tasks.filter((task) => {
     if (!task.due_date) return false;
@@ -669,6 +727,15 @@ function App() {
               onEditTask={handleEditTask}
               onToggleComplete={handleToggleComplete}
               onQuickAddTask={handleQuickAddTaskWithDate}
+              onNavigate={setCurrentPage}
+            />
+          )}
+
+          {currentPage === 'planner' && (
+            <PlannerPage
+              tasks={tasks}
+              onApplyPlan={handleApplyPlan}
+              onNavigate={setCurrentPage}
             />
           )}
 

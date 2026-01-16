@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, ListTodo, ChevronLeft, ChevronRight, ChevronDown, Check, Inbox, Calendar, Clock, Search, Circle, AlertCircle, CalendarDays, CheckCircle2 } from 'lucide-react';
+import { Plus, ListTodo, ChevronLeft, ChevronRight, ChevronDown, Check, Inbox, Calendar, Clock, Search, Circle, AlertCircle, CalendarDays, CheckCircle2, Wand2 } from 'lucide-react';
 import { Task } from '../types';
 import { fireConfetti } from '../utils/confetti';
+import { PageType } from './Sidebar';
 
 interface TasksPageProps {
   tasks: Task[];
@@ -9,6 +10,7 @@ interface TasksPageProps {
   onEditTask: (task: Task) => void;
   onToggleComplete: (taskId: string, completed: boolean) => Promise<void>;
   onQuickAddTask?: (title: string, dueDate: string) => Promise<void>;
+  onNavigate?: (page: PageType) => void;
 }
 
 export const TasksPage: React.FC<TasksPageProps> = ({
@@ -16,7 +18,8 @@ export const TasksPage: React.FC<TasksPageProps> = ({
   onAddTask,
   onEditTask,
   onToggleComplete,
-  onQuickAddTask
+  onQuickAddTask,
+  onNavigate
 }) => {
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
@@ -545,8 +548,17 @@ export const TasksPage: React.FC<TasksPageProps> = ({
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Tarefas sem data definida
+                Tarefas coletadas porém sem data definida
               </p>
+              {inboxTasks.length > 0 && onNavigate && (
+                <button
+                  onClick={() => onNavigate('planner')}
+                  className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-sm font-medium transition-colors"
+                >
+                  <Wand2 size={16} />
+                  Planejar com IA
+                </button>
+              )}
             </div>
 
             {tasks.filter(t => !t.due_date && !t.completed).length > 5 && (

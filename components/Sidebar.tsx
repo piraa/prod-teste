@@ -6,10 +6,11 @@ import {
   Flag,
   StickyNote,
   BarChart2,
-  Zap
+  Zap,
+  Wand2
 } from 'lucide-react';
 
-export type PageType = 'dashboard' | 'tasks' | 'habits' | 'goals' | 'notes' | 'analytics';
+export type PageType = 'dashboard' | 'tasks' | 'habits' | 'goals' | 'notes' | 'analytics' | 'planner';
 
 interface SidebarProps {
   userAvatar: string;
@@ -39,6 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navItems: { page: PageType; icon: React.ElementType; label: string }[] = [
     { page: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { page: 'tasks', icon: CheckCircle2, label: 'Minhas Tarefas' },
+    { page: 'planner', icon: Wand2, label: 'Planejador' },
     { page: 'habits', icon: Activity, label: 'Hábitos' },
     { page: 'goals', icon: Flag, label: 'Objetivos' },
     { page: 'notes', icon: StickyNote, label: 'Anotações' },
