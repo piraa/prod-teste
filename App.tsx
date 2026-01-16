@@ -590,7 +590,7 @@ function App() {
           onNewTask={handleNewTask}
         />
 
-        <main className="flex-1 overflow-y-auto custom-scrollbar">
+        <main className="flex-1 overflow-y-auto custom-scrollbar pb-24">
           {currentPage === 'dashboard' && (
             <div className="p-4 lg:p-8">
               <div className="max-w-7xl mx-auto space-y-8">
